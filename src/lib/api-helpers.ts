@@ -4,13 +4,13 @@ import { getSession, PayloadToken } from './auth';
 export type Handler = (
   req: NextRequest,
   session: PayloadToken,
-  ctx: { params: Promise<Record<string, string>> }
+  ctx: any // ⚠️ Temporaire pour contourner le typage strict de Next.js 15
 ) => Promise<NextResponse> | NextResponse;
 
 export function withRoles(roles: string[], handler: Handler) {
   return async (
     req: NextRequest,
-    ctx: { params: Promise<Record<string, string>> } = { params: Promise.resolve({}) }
+    ctx: any = { params: Promise.resolve({}) }
   ): Promise<NextResponse> => {
     const session = await getSession();
 
