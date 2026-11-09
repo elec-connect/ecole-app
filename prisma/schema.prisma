@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PROFESSEUR
+  ETUDIANT
+  PARENT
+}
+
+enum StatutPresence {
+  PRESENT
+  ABSENT
+  RETARD
+  JUSTIFIE
+}
+
+enum TypeNote {
+  CONTROLE
+  EXAMEN
+  DEVOIR
+}
+
+model Configuration {
+  id          String   @id @default("singleton")
+  donnees     String
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  motDePasse String
+  nom        String
+  prenom     String
+  role       Role
+  actif      Boolean  @default(true)
+  emailParent String?          // ← email du parent (pour les ÉLÈVES)
+  createdAt  DateTime @default(now())
+
+  coursProf      Cours[]       @relation("ProfCours")
+  coursPrincipal Classe[]      @relation("ProfPrincipal")
+  notes          Note[]
+  presences      Presence[]
+  inscriptions   Inscription[]
+  messagesEnv    Message[]     @relation("Expediteur")
+  messagesRec    Message[]     @relation("Destinataire")
+  matieres       Matiere[]     @relation("ProfMatieres")
+  enfants        ParentEleve[] @relation("Parent")
+  parents        ParentEleve[] @relation("Eleve")
+}
+
+model ParentEleve {
+  id       String  @id @default(cuid())
+  parentId String
+  eleveId  String
+  relation String? // "père", "mère", "tuteur"
+
+  parent User @relation("Parent", fields: [parentId], references: [id], onDelete: Cascade)
+  eleve  User @relation("Eleve", fields: [eleveId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, eleveId])
+}
+
+model Classe {
+  id                    String @id @default(cuid())
+  nom                   String
+  niveau                String
+  anneeScolaire         String
+  professeurPrincipalId String?
+
+  professeurPrincipal User?           @relation("ProfPrincipal", fields: [professeurPrincipalId], references: [id])
+  inscriptions        Inscription[]
+  cours               Cours[]
+  volumes             VolumeHoraire[]
+
+  @@unique([nom, anneeScolaire])
+}
+
+model Matiere {
+  id               String @id @default(cuid())
+  nom              String @unique
+  coefficient      Int    @default(1)
+  heuresParSemaine Int    @default(2)
+
+  cours       Cours[]
+  notes       Note[]
+  professeurs User[]          @relation("ProfMatieres")
+  salles      Salle[]         @relation("SalleMatieres")
+  volumes     VolumeHoraire[]
+}
+
+model Salle {
+  id        String   @id @default(cuid())
+  nom       String   @unique
+  capacite  Int?
+  type      String?
+  batiment  String?
+  createdAt DateTime @default(now())
+
+  cours    Cours[]
+  matieres Matiere[] @relation("SalleMatieres")
+}
+
+model VolumeHoraire {
+  id          String @id @default(cuid())
+  classeId    String
+  matiereId   String
+  heures      Int    @default(2)
+  coefficient Int    @default(1)
+
+  classe  Classe  @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  matiere Matiere @relation(fields: [matiereId], references: [id], onDelete: Cascade)
+
+  @@unique([classeId, matiereId])
+}
+
+model Cours {
+  id           String @id @default(cuid())
+  classeId     String
+  matiereId    String
+  professeurId String
+  jourSemaine  Int
+  heureDebut   String
+  heureFin     String
+  salleId      String?
+
+  classe      Classe       @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  matiere     Matiere      @relation(fields: [matiereId], references: [id])
+  professeur  User         @relation("ProfCours", fields: [professeurId], references: [id])
+  salle       Salle?       @relation(fields: [salleId], references: [id])
+  presences   Presence[]
+  devoirs     Devoir[]
+  evaluations Evaluation[]
+}
+
+model Inscription {
+  id            String @id @default(cuid())
+  etudiantId    String
+  classeId      String
+  anneeScolaire String
+
+  etudiant User   @relation(fields: [etudiantId], references: [id], onDelete: Cascade)
+  classe   Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+
+  @@unique([etudiantId, classeId, anneeScolaire])
+}
+
+model Presence {
+  id         String         @id @default(cuid())
+  coursId    String
+  etudiantId String
+  date       DateTime
+  statut     StatutPresence
+
+  cours    Cours @relation(fields: [coursId], references: [id], onDelete: Cascade)
+  etudiant User  @relation(fields: [etudiantId], references: [id], onDelete: Cascade)
+
+  @@unique([coursId, etudiantId, date])
+}
+
+model Evaluation {
+  id          String   @id @default(cuid())
+  coursId     String
+  nom         String
+  type        TypeNote
+  coefficient Int      @default(1)
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  cours Cours  @relation(fields: [coursId], references: [id], onDelete: Cascade)
+  notes Note[]
+
+  @@unique([coursId, nom])
+}
+
+model Note {
+  id           String   @id @default(cuid())
+  etudiantId   String
+  matiereId    String
+  evaluationId String?
+  type         TypeNote
+  valeur       Float
+  coefficient  Int      @default(1)
+  date         DateTime @default(now())
+  commentaire  String?
+
+  etudiant   User        @relation(fields: [etudiantId], references: [id], onDelete: Cascade)
+  matiere    Matiere     @relation(fields: [matiereId], references: [id])
+  evaluation Evaluation? @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+
+  @@unique([etudiantId, evaluationId])
+}
+
+model Devoir {
+  id          String   @id @default(cuid())
+  coursId     String
+  titre       String
+  description String?
+  deadline    DateTime
+  fichierUrl  String?
+
+  cours Cours @relation(fields: [coursId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  expediteurId   String
+  destinataireId String
+  contenu        String
+  lu             Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  expediteur   User @relation("Expediteur", fields: [expediteurId], references: [id])
+  destinataire User @relation("Destinataire", fields: [destinataireId], references: [id])
+}
