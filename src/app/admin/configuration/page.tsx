@@ -174,6 +174,14 @@ export default function ConfigurationPage() {
             className="w-full border border-gray-300 rounded px-3 py-2 font-mono text-xs"
           />
           <p className="text-xs text-gray-500">Laisser vide pour ne pas modifier.</p>
+          <a
+            href="https://neon.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+          >
+            🔗 Créer ou gérer une base PostgreSQL sur Neon →
+          </a>
         </div>
 
         {/* Authentification */}
@@ -189,6 +197,14 @@ export default function ConfigurationPage() {
           <p className="text-xs text-gray-500">
             Modifier ce secret invalidera toutes les sessions en cours.
           </p>
+          <a
+            href="https://jwt.io/introduction"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+          >
+            🔗 En savoir plus sur les JSON Web Tokens (JWT) →
+          </a>
         </div>
 
         {/* Général */}
