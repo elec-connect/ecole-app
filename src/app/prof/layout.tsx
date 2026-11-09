@@ -7,7 +7,7 @@ import { Header } from '@/components/layout/Header';
 
 const ITEMS = [
   { href: '/prof/dashboard', label: 'Tableau de bord', icon: '📊' },
-  { href: '/prof/appel', label: 'Faire l'appel', icon: '✅' },
+  { href: '/prof/appel', label: "Faire l'appel", icon: '✅' }, 
   { href: '/prof/notes', label: 'Saisir des notes', icon: '📝' },
   { href: '/prof/devoirs', label: 'Devoirs', icon: '📚' },
 ];
