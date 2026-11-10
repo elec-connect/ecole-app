@@ -21,6 +21,10 @@ export const GET = withAdmin(async (req) => {
       emailParent: true,
       createdAt: true,
       matieres: { select: { id: true, nom: true, coefficient: true } },
+      inscriptions: {
+        include: { classe: true },
+        orderBy: { anneeScolaire: 'desc' },
+      },
       enfants: {
         include: {
           eleve: {
@@ -46,25 +50,23 @@ export const GET = withAdmin(async (req) => {
 });
 
 export const POST = withAdmin(async (req) => {
-  const { email, motDePasse, nom, prenom, role, matiereIds, emailParent } = await req.json();
+  const { email, motDePasse, nom, prenom, role, matiereIds, emailParent, classeId } =
+    await req.json();
 
   if (!email || !nom || !prenom || !role) {
     return NextResponse.json({ erreur: 'Champs requis manquants' }, { status: 400 });
   }
 
-  // ⭐ Mot de passe par défaut pour ÉLÈVE et PARENT
+  // Mot de passe par défaut pour ÉLÈVE et PARENT
   let motDePasseFinal = motDePasse;
   if ((role === 'ETUDIANT' || role === 'PARENT') && !motDePasse) {
-    // Nettoyer prénom et nom : retirer espaces, accents, caractères spéciaux
     const nettoyer = (s: string) =>
       s
         .toLowerCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // retire les accents
-        .replace(/[^a-z0-9]/g, '');      // garde lettres et chiffres
-    const prenomClean = nettoyer(prenom);
-    const nomClean = nettoyer(nom);
-    motDePasseFinal = `${prenomClean}-${nomClean}`;
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+    motDePasseFinal = `${nettoyer(prenom)}-${nettoyer(nom)}`;
   }
 
   if (!motDePasseFinal || motDePasseFinal.length < 6) {
@@ -85,6 +87,17 @@ export const POST = withAdmin(async (req) => {
       ...(role === 'PROFESSEUR' && Array.isArray(matiereIds) && matiereIds.length > 0
         ? { matieres: { connect: matiereIds.map((id: string) => ({ id })) } }
         : {}),
+      // ⭐ Inscrire l'élève dans la classe
+      ...(role === 'ETUDIANT' && classeId
+        ? {
+            inscriptions: {
+              create: {
+                classeId,
+                anneeScolaire: new Date().getFullYear() + '-' + (new Date().getFullYear() + 1),
+              },
+            },
+          }
+        : {}),
     },
     select: {
       id: true,
@@ -97,11 +110,11 @@ export const POST = withAdmin(async (req) => {
     },
   });
 
-  // ⭐ Retourner le mot de passe généré pour l'afficher à l'admin
   return NextResponse.json(
     {
       ...user,
-      motDePasseGenere: (role === 'ETUDIANT' || role === 'PARENT') && !motDePasse ? motDePasseFinal : null,
+      motDePasseGenere:
+        (role === 'ETUDIANT' || role === 'PARENT') && !motDePasse ? motDePasseFinal : null,
     },
     { status: 201 }
   );

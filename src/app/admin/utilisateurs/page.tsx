@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 
 type Role = 'ADMIN' | 'PROFESSEUR' | 'ETUDIANT' | 'PARENT';
 type Matiere = { id: string; nom: string; coefficient: number };
+type Classe = { id: string; nom: string; niveau: string; anneeScolaire: string };
 
 type User = {
   id: string;
@@ -16,6 +17,7 @@ type User = {
   createdAt: string;
   matieres?: Matiere[];
   enfants?: { id: string; eleve: { id: string; nom: string; prenom: string; email: string } }[];
+  inscriptions?: { id: string; classe: Classe }[];
 };
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -41,11 +43,13 @@ const EMPTY_FORM = {
   role: 'ETUDIANT' as Role,
   matiereIds: [] as string[],
   emailParent: '',
+  classeId: '',
 };
 
 export default function UtilisateursPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [matieres, setMatieres] = useState<Matiere[]>([]);
+  const [classes, setClasses] = useState<Classe[]>([]);
   const [eleves, setEleves] = useState<User[]>([]);
   const [filtreRole, setFiltreRole] = useState<Role | 'TOUS'>('TOUS');
   const [recherche, setRecherche] = useState('');
@@ -58,13 +62,15 @@ export default function UtilisateursPage() {
   const [relations, setRelations] = useState<Record<string, string>>({});
 
   async function charger() {
-    const [ru, rm, re] = await Promise.all([
+    const [ru, rm, rc, re] = await Promise.all([
       fetch('/api/utilisateurs'),
       fetch('/api/matieres'),
+      fetch('/api/classes'),
       fetch('/api/utilisateurs?role=ETUDIANT'),
     ]);
     setUsers(await ru.json());
     setMatieres(await rm.json());
+    setClasses(await rc.json());
     setEleves(await re.json());
   }
 
@@ -90,7 +96,6 @@ export default function UtilisateursPage() {
       });
   }, [edition, form.role, form.id]);
 
-  // Auto-sélection des élèves dont emailParent correspond à l'email du parent
   useEffect(() => {
     if (form.role !== 'PARENT' || !form.email) return;
     const emailLower = form.email.toLowerCase().trim();
@@ -146,7 +151,10 @@ export default function UtilisateursPage() {
     };
     if (form.motDePasse) body.motDePasse = form.motDePasse;
     if (form.role === 'PROFESSEUR') body.matiereIds = form.matiereIds;
-    if (form.role === 'ETUDIANT') body.emailParent = form.emailParent || null;
+    if (form.role === 'ETUDIANT') {
+      body.emailParent = form.emailParent || null;
+      body.classeId = form.classeId || null;
+    }
 
     const res = await fetch(url, {
       method,
@@ -163,7 +171,6 @@ export default function UtilisateursPage() {
 
     const userCree = await res.json();
 
-    // Afficher le mot de passe généré si applicable
     if (userCree.motDePasseGenere) {
       alert(
         '✅ Utilisateur créé !\n\n' +
@@ -173,7 +180,6 @@ export default function UtilisateursPage() {
       );
     }
 
-    // Si parent, gérer les liens avec les enfants
     if (form.role === 'PARENT') {
       const parents = await (await fetch('/api/parents')).json();
       const parentActuel = parents.find((p: any) => p.id === userCree.id);
@@ -219,6 +225,7 @@ export default function UtilisateursPage() {
       role: u.role,
       matiereIds: u.matieres?.map((m) => m.id) ?? [],
       emailParent: u.emailParent ?? '',
+      classeId: u.inscriptions?.[0]?.classe?.id ?? '',
     });
     setEnfantsSelectionnes([]);
     setRelations({});
@@ -251,7 +258,6 @@ export default function UtilisateursPage() {
     charger();
   }
 
-  // Filtrer les élèves affichés dans la section parent
   const emailLower = form.email.toLowerCase().trim();
   const elevesAffiches =
     form.role === 'PARENT' && emailLower
@@ -266,7 +272,7 @@ export default function UtilisateursPage() {
         <p className="text-gray-500 mt-1">{users.length} compte(s)</p>
       </div>
 
-      {/* CADRE DU FORMULAIRE */}
+      {/* Formulaire */}
       <div className={'bg-white rounded-xl shadow-sm border-2 p-6 ' + (edition ? 'border-blue-400' : 'border-gray-100')}>
         <h2 className="font-semibold mb-4">
           {edition ? '✏️ Modifier ' + form.prenom + ' ' + form.nom : '➕ Nouvel utilisateur'}
@@ -305,7 +311,6 @@ export default function UtilisateursPage() {
               />
             </div>
 
-            {/* MOT DE PASSE — LABEL DYNAMIQUE SELON RÔLE */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {edition
@@ -339,7 +344,7 @@ export default function UtilisateursPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
               <select
                 value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as Role, matiereIds: [], emailParent: '' })}
+                onChange={(e) => setForm({ ...form, role: e.target.value as Role, matiereIds: [], emailParent: '', classeId: '' })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
                 <option value="ETUDIANT">Élève</option>
@@ -350,7 +355,31 @@ export default function UtilisateursPage() {
             </div>
           </div>
 
-          {/* EMAIL PARENT (ÉLÈVE) */}
+          {/* ⭐ Classe (ÉLÈVE) */}
+          {form.role === 'ETUDIANT' && (
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200 space-y-3">
+              <h3 className="text-sm font-semibold text-blue-900">
+                🏫 Classe de l&apos;élève
+              </h3>
+              <select
+                value={form.classeId}
+                onChange={(e) => setForm({ ...form, classeId: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="">— Aucune classe —</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nom} ({c.niveau}) — {c.anneeScolaire}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-blue-700">
+                Sélectionnez la classe pour inscrire l&apos;élève.
+              </p>
+            </div>
+          )}
+
+          {/* Email parent (ÉLÈVE) */}
           {form.role === 'ETUDIANT' && (
             <div className="bg-green-50 rounded-xl p-4 border border-green-200">
               <h3 className="text-sm font-semibold text-green-900 mb-2">
@@ -369,7 +398,7 @@ export default function UtilisateursPage() {
             </div>
           )}
 
-          {/* MATIÈRES (PROFESSEUR) */}
+          {/* Matières (PROFESSEUR) */}
           {form.role === 'PROFESSEUR' && (
             <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
               <h3 className="text-sm font-semibold text-blue-900 mb-3">
@@ -403,7 +432,7 @@ export default function UtilisateursPage() {
             </div>
           )}
 
-          {/* ENFANTS (PARENT) */}
+          {/* Enfants (PARENT) */}
           {form.role === 'PARENT' && (
             <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
               <div className="flex items-center justify-between mb-3">
@@ -419,13 +448,13 @@ export default function UtilisateursPage() {
 
               {emailLower && elevesAffiches.length === 0 && (
                 <p className="text-xs text-orange-600 bg-orange-50 p-2 rounded mb-2">
-                  ⚠️ Aucun élève n'a l'email parent "{form.email}". Vérifiez l'email ou retirez-le pour voir tous les élèves.
+                  ⚠️ Aucun élève n&apos;a l&apos;email parent &quot;{form.email}&quot;. Vérifiez l&apos;email ou retirez-le pour voir tous les élèves.
                 </p>
               )}
 
               {!emailLower && (
                 <p className="text-xs text-purple-700 mb-2">
-                  💡 Saisissez l'email du parent ci-dessus pour filtrer automatiquement ses enfants.
+                  💡 Saisissez l&apos;email du parent ci-dessus pour filtrer automatiquement ses enfants.
                 </p>
               )}
 
@@ -476,7 +505,7 @@ export default function UtilisateursPage() {
             </div>
           )}
 
-          {/* BOUTON DANS LE FORMULAIRE */}
+          {/* Bouton dans le formulaire */}
           <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
             <button
               type="submit"
@@ -499,7 +528,7 @@ export default function UtilisateursPage() {
         </form>
       </div>
 
-      {/* FILTRES */}
+      {/* Filtres */}
       <div className="flex flex-wrap gap-3 items-end">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Filtrer par rôle</label>
@@ -527,7 +556,7 @@ export default function UtilisateursPage() {
         </div>
       </div>
 
-      {/* TABLEAU */}
+      {/* Tableau */}
       <div className="overflow-x-auto rounded-xl border border-gray-100">
         <table className="w-full bg-white">
           <thead className="bg-gray-50">
@@ -535,7 +564,7 @@ export default function UtilisateursPage() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase">Nom</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase">Email</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase">Rôle</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase">Détails</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase">Classe / Matières</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase">Statut</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase">Actions</th>
             </tr>
@@ -566,6 +595,10 @@ export default function UtilisateursPage() {
                           </span>
                         ))}
                       </div>
+                    ) : u.role === 'ETUDIANT' && u.inscriptions && u.inscriptions.length > 0 ? (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                        🏫 {u.inscriptions[0].classe.nom}
+                      </span>
                     ) : u.role === 'PARENT' && u.enfants && u.enfants.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {u.enfants.map((lien) => (
@@ -574,44 +607,22 @@ export default function UtilisateursPage() {
                           </span>
                         ))}
                       </div>
-                    ) : u.role === 'ETUDIANT' && u.emailParent ? (
-                      <span className="text-xs bg-green-50 text-green-700 px-1.5 py-0.5 rounded">
-                        📧 {u.emailParent}
-                      </span>
                     ) : (
                       <span className="text-gray-300">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span
-                      className={
-                        'px-2 py-0.5 rounded-full text-xs font-medium ' +
-                        (u.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700')
-                      }
-                    >
+                    <span className={'px-2 py-0.5 rounded-full text-xs font-medium ' + (u.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700')}>
                       {u.actif ? 'Actif' : 'Inactif'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => editer(u)}
-                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        Éditer
-                      </button>
-                      <button
-                        onClick={() => toggleActif(u)}
-                        className="px-2 py-1 text-xs bg-gray-200 text-gray-900 rounded hover:bg-gray-300"
-                      >
+                      <button onClick={() => editer(u)} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Éditer</button>
+                      <button onClick={() => toggleActif(u)} className="px-2 py-1 text-xs bg-gray-200 text-gray-900 rounded hover:bg-gray-300">
                         {u.actif ? 'Désactiver' : 'Activer'}
                       </button>
-                      <button
-                        onClick={() => supprimer(u)}
-                        className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                      >
-                        Suppr.
-                      </button>
+                      <button onClick={() => supprimer(u)} className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">Suppr.</button>
                     </div>
                   </td>
                 </tr>

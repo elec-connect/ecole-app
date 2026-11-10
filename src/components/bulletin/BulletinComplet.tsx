@@ -8,7 +8,7 @@ type Note = {
   nomEvaluation: string;
   valeur: number;
   coefficient: number;
-  date: string;
+  date: string | Date;
   commentaire?: string | null;
 };
 
@@ -24,7 +24,7 @@ type Matiere = {
 
 type BulletinData = {
   eleve: { id: string; nom: string; prenom: string; email: string };
-  classe: { id: string; nom: string; niveau: string; anneeScolaire: string };
+  classe: { id: string; nom: string; niveau: string; anneeScolaire: string } | null;
   matieres: Matiere[];
   moyenneGenerale: number | null;
   mention: { label: string; color: string } | null;
@@ -40,7 +40,7 @@ type BulletinData = {
     absents: number;
     retards: number;
     justifies: number;
-    detail: { date: string; matiere: string; statut: string }[];
+    detail: { date: string | Date; matiere: string; statut: string }[];
   };
 };
 
@@ -63,8 +63,8 @@ export function BulletinComplet({ data, etudiantId, anneeScolaire }: Props) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        alert('❌ ' + (data.erreur ?? 'Erreur'));
+        const err = await res.json();
+        alert('❌ ' + (err.erreur ?? 'Erreur'));
         return;
       }
 
@@ -87,6 +87,20 @@ export function BulletinComplet({ data, etudiantId, anneeScolaire }: Props) {
   }
 
   const { eleve, classe, matieres, moyenneGenerale, mention, rang, totalEleves, statsClasse, absences } = data;
+
+  // ⭐ Sécurité : si pas de classe, afficher un message
+  if (!classe) {
+    return (
+      <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+        <p className="text-orange-800 font-medium">
+          ⚠️ Aucune classe assignée pour cet élève.
+        </p>
+        <p className="text-sm text-orange-700 mt-1">
+          Le bulletin ne peut pas être généré sans classe.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -119,15 +133,21 @@ export function BulletinComplet({ data, etudiantId, anneeScolaire }: Props) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-sm">
           <div>
             <p className="text-gray-500 text-xs uppercase">Élève</p>
-            <p className="font-semibold text-gray-900">{eleve.prenom} {eleve.nom}</p>
+            <p className="font-semibold text-gray-900">
+              {eleve.prenom} {eleve.nom}
+            </p>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase">Classe</p>
-            <p className="font-semibold text-gray-900">{classe.nom} ({classe.niveau})</p>
+            <p className="font-semibold text-gray-900">
+              {classe.nom} ({classe.niveau})
+            </p>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase">Rang</p>
-            <p className="font-semibold text-gray-900">{rang}ème / {totalEleves}</p>
+            <p className="font-semibold text-gray-900">
+              {rang > 0 ? `${rang}ème / ${totalEleves}` : '—'}
+            </p>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase">Email</p>
@@ -139,65 +159,56 @@ export function BulletinComplet({ data, etudiantId, anneeScolaire }: Props) {
         <table className="w-full border border-gray-200 mb-6">
           <thead className="bg-gray-100">
             <tr>
-              <th className="text-left px-3 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">Matière</th>
-              <th className="text-center px-2 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">Coef.</th>
-              <th className="text-center px-2 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">Notes</th>
-              <th className="text-center px-2 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">Moyenne</th>
-              <th className="text-center px-2 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">Appréciation</th>
+              <th className="text-left px-3 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">
+                Matière
+              </th>
+              <th className="text-center px-2 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">
+                Coef.
+              </th>
+              <th className="text-center px-2 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">
+                Notes
+              </th>
+              <th className="text-center px-2 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">
+                Moyenne
+              </th>
+              <th className="text-center px-2 py-2 text-xs font-semibold text-gray-700 uppercase border border-gray-200">
+                Appréciation
+              </th>
             </tr>
           </thead>
           <tbody>
             {matieres.map((m) => (
-              <>
-                <tr key={m.id} className="bg-white">
-                  <td className="px-3 py-2 text-sm font-medium border border-gray-200">{m.nom}</td>
-                  <td className="px-2 py-2 text-sm text-center border border-gray-200">{m.coefficient}</td>
-                  <td className="px-2 py-2 text-sm text-center border border-gray-200 text-gray-600">{m.nbNotes}</td>
-                  <td className="px-2 py-2 text-sm text-center border border-gray-200">
-                    {m.moyenne !== null ? (
-                      <span className={'font-bold ' + (m.moyenne >= 10 ? 'text-green-600' : 'text-red-600')}>
-                        {m.moyenne.toFixed(2)}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-2 text-sm text-center border border-gray-200">
-                    {m.appreciation ? (
-                      <span className={m.appreciation.color + ' font-medium'}>
-                        {m.appreciation.label}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                </tr>
-                {/* Détail des notes */}
-                {m.notes.length > 0 && (
-                  <tr key={m.id + '-detail'}>
-                    <td colSpan={5} className="px-3 py-2 bg-gray-50 border border-gray-200">
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <p className="font-medium text-gray-700 mb-1">Détail :</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                          {m.notes.map((n) => (
-                            <div key={n.id} className="flex items-center gap-2">
-                              <span className="text-gray-400">•</span>
-                              <span className="font-medium">{n.nomEvaluation}</span>
-                              <span className="text-gray-500">
-                                ({new Date(n.date).toLocaleDateString('fr-FR')})
-                              </span>
-                              <span className={'font-semibold ' + (n.valeur >= 10 ? 'text-green-600' : 'text-red-600')}>
-                                {n.valeur.toFixed(2)}/20
-                              </span>
-                              <span className="text-gray-400">coef {n.coefficient}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
+              <tr key={m.id} className="bg-white">
+                <td className="px-3 py-2 text-sm font-medium border border-gray-200">{m.nom}</td>
+                <td className="px-2 py-2 text-sm text-center border border-gray-200">
+                  {m.coefficient}
+                </td>
+                <td className="px-2 py-2 text-sm text-center border border-gray-200 text-gray-600">
+                  {m.nbNotes}
+                </td>
+                <td className="px-2 py-2 text-sm text-center border border-gray-200">
+                  {m.moyenne !== null ? (
+                    <span
+                      className={
+                        'font-bold ' + (m.moyenne >= 10 ? 'text-green-600' : 'text-red-600')
+                      }
+                    >
+                      {m.moyenne.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
+                </td>
+                <td className="px-2 py-2 text-sm text-center border border-gray-200">
+                  {m.appreciation ? (
+                    <span className={m.appreciation.color + ' font-medium'}>
+                      {m.appreciation.label}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -206,18 +217,24 @@ export function BulletinComplet({ data, etudiantId, anneeScolaire }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
             <p className="text-xs text-blue-700 uppercase font-medium">Moyenne générale</p>
-            <p className={'text-3xl font-bold ' + (moyenneGenerale !== null && moyenneGenerale >= 10 ? 'text-green-600' : 'text-red-600')}>
+            <p
+              className={
+                'text-3xl font-bold ' +
+                (moyenneGenerale !== null && moyenneGenerale >= 10
+                  ? 'text-green-600'
+                  : 'text-red-600')
+              }
+            >
               {moyenneGenerale !== null ? moyenneGenerale.toFixed(2) : '—'}/20
             </p>
-            {mention && (
-              <p className={'text-sm font-semibold ' + mention.color}>{mention.label}</p>
-            )}
+            {mention && <p className={'text-sm font-semibold ' + mention.color}>{mention.label}</p>}
           </div>
 
           <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
             <p className="text-xs text-purple-700 uppercase font-medium">Rang dans la classe</p>
             <p className="text-3xl font-bold text-purple-700">
-              {rang}<span className="text-lg">ème</span>
+              {rang > 0 ? rang : '—'}
+              {rang > 0 && <span className="text-lg">ème</span>}
             </p>
             <p className="text-xs text-purple-600">sur {totalEleves} élèves</p>
           </div>
@@ -225,9 +242,24 @@ export function BulletinComplet({ data, etudiantId, anneeScolaire }: Props) {
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <p className="text-xs text-gray-600 uppercase font-medium">Statistiques de classe</p>
             <div className="text-sm space-y-1 mt-1">
-              <p>Moyenne : <span className="font-semibold">{statsClasse.moyenneClasse?.toFixed(2) ?? '—'}/20</span></p>
-              <p>Meilleure : <span className="font-semibold text-green-600">{statsClasse.meilleureMoyenne?.toFixed(2) ?? '—'}/20</span></p>
-              <p>Plus basse : <span className="font-semibold text-red-600">{statsClasse.plusBasseMoyenne?.toFixed(2) ?? '—'}/20</span></p>
+              <p>
+                Moyenne :{' '}
+                <span className="font-semibold">
+                  {statsClasse.moyenneClasse?.toFixed(2) ?? '—'}/20
+                </span>
+              </p>
+              <p>
+                Meilleure :{' '}
+                <span className="font-semibold text-green-600">
+                  {statsClasse.meilleureMoyenne?.toFixed(2) ?? '—'}/20
+                </span>
+              </p>
+              <p>
+                Plus basse :{' '}
+                <span className="font-semibold text-red-600">
+                  {statsClasse.plusBasseMoyenne?.toFixed(2) ?? '—'}/20
+                </span>
+              </p>
             </div>
           </div>
         </div>
@@ -270,7 +302,7 @@ export function BulletinComplet({ data, etudiantId, anneeScolaire }: Props) {
             <div className="border-b border-dashed border-gray-300 h-16" />
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-8">Cachet de l'établissement</p>
+            <p className="text-xs text-gray-500 mb-8">Cachet de l&apos;établissement</p>
             <div className="border-b border-dashed border-gray-300 h-16" />
           </div>
         </div>
@@ -282,10 +314,18 @@ export function BulletinComplet({ data, etudiantId, anneeScolaire }: Props) {
 
       <style jsx global>{`
         @media print {
-          body * { visibility: hidden; }
-          .print\\:hidden { display: none !important; }
-          .print\\:shadow-none { box-shadow: none !important; }
-          .print\\:border-none { border: none !important; }
+          body * {
+            visibility: hidden;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+          .print\\:shadow-none {
+            box-shadow: none !important;
+          }
+          .print\\:border-none {
+            border: none !important;
+          }
         }
       `}</style>
     </div>
