@@ -22,6 +22,7 @@ async function main() {
     jwtSecret,
     appName: 'ÉcoleApp',
     anneeScolaireCourante: '2025-2026',
+    configPassword: process.env.BOOTSTRAP_CONFIG_PASSWORD ?? 'SahnounBenHaouala18011978',
   };
 
   await prisma.configuration.upsert({

@@ -221,3 +221,17 @@ model Message {
   expediteur   User @relation("Expediteur", fields: [expediteurId], references: [id])
   destinataire User @relation("Destinataire", fields: [destinataireId], references: [id])
 }
+
+model Archive {
+  id          String   @id @default(cuid())
+  anneeScolaire String
+  nom         String   // ex: "6ème A - Archive 2024-2025"
+  type        String   // "notes", "complet"
+  format      String   // "csv", "json"
+  contenu     String   @db.Text  // Le contenu CSV/JSON
+  nbEleves    Int      @default(0)
+  nbNotes     Int      @default(0)
+  nbClasses   Int      @default(0)
+  createdAt   DateTime @default(now())
+  createdById String?
+}

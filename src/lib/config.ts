@@ -6,7 +6,9 @@ export type AppConfig = {
   jwtSecret: string;
   appName?: string;
   anneeScolaireCourante?: string;
-  logoUrl?: string;   // ← AJOUTER (base64 data URL)
+  logoUrl?: string;
+  cronSecret?: string;
+  configPassword?: string;
 };
 
 let cache: AppConfig | null = null;

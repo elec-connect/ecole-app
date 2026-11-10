@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guide de déploiement — ÉcoleApp</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --danger: #dc2626;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-600: #4b5563;
+      --gray-900: #111827;
+      --purple: #7c3aed;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    header p { font-size: 1.1rem; opacity: 0.9; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+    .services {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    .service-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--gray-200);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .service-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    }
+    .service-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .service-card p { color: var(--gray-600); font-size: 0.95rem; margin-bottom: 1rem; }
+    .service-card a {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .service-card a:hover { background: var(--primary-light); }
+
+    .step {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border-left: 4px solid var(--primary);
+      transition: all 0.3s;
+    }
+    .step.completed { border-left-color: var(--success); opacity: 0.7; }
+    .step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .step-number {
+      background: var(--primary);
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .step.completed .step-number { background: var(--success); }
+    .step h2 {
+      font-size: 1.4rem;
+      margin-left: 1rem;
+      flex: 1;
+    }
+    .step-checkbox {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      accent-color: var(--success);
+    }
+    .step-content { margin-left: 3rem; }
+    .step-content p { margin-bottom: 0.8rem; color: var(--gray-600); }
+    .step-content code {
+      background: var(--gray-100);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.9em;
+      color: var(--danger);
+    }
+    .step-content pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 0.8rem 0;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: none;
+      padding: 0.3rem 0.7rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.3); }
+    .copy-btn.copied { background: var(--success); }
+
+    .alert {
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      display: flex;
+      gap: 0.7rem;
+      align-items: flex-start;
+    }
+    .alert-warning { background: #fef3c7; border-left: 4px solid var(--warning); color: #92400e; }
+    .alert-success { background: #dcfce7; border-left: 4px solid var(--success); color: #14532d; }
+    .alert-info { background: #dbeafe; border-left: 4px solid var(--primary); color: #1e3a8a; }
+    .alert-danger { background: #fee2e2; border-left: 4px solid var(--danger); color: #7f1d1d; }
+    .alert-purple { background: #ede9fe; border-left: 4px solid var(--purple); color: #4c1d95; }
+
+    .info-box {
+      background: #f8fafc;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      margin: 1rem 0;
+    }
+    .info-box h4 {
+      font-size: 1rem;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .info-box p, .info-box ul { font-size: 0.9rem; color: var(--gray-600); margin-bottom: 0.5rem; }
+    .info-box ul { margin-left: 1.5rem; }
+    .info-box li { margin-bottom: 0.3rem; }
+    .info-box code {
+      background: var(--gray-100);
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+      font-size: 0.85em;
+    }
+
+    .checklist {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 2rem 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .checklist h2 { margin-bottom: 1rem; color: var(--primary); }
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .checklist-item:last-child { border-bottom: none; }
+    .checklist-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--success);
+    }
+    .checklist-item label { cursor: pointer; flex: 1; }
+    .checklist-item input:checked + label { text-decoration: line-through; color: var(--gray-600); }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 4px;
+      background: var(--success);
+      transition: width 0.3s;
+      z-index: 1000;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .comparison-table th, .comparison-table td {
+      padding: 0.8rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 0.9rem;
+    }
+    .comparison-table th {
+      background: var(--gray-50);
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .comparison-table .good { color: var(--success); font-weight: 600; }
+    .comparison-table .bad { color: var(--danger); font-weight: 600; }
+    .comparison-table .mid { color: var(--warning); font-weight: 600; }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--gray-600);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--gray-200);
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.8rem; }
+      .step-content { margin-left: 0; margin-top: 1rem; }
+      .step h2 { font-size: 1.1rem; }
+      .comparison-table { font-size: 0.8rem; }
+      .comparison-table th, .comparison-table td { padding: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <header>
+    <h1>🎓 Guide de déploiement — ÉcoleApp</h1>
+    <p>Déployer un nouveau client à partir d'une copie de <code>ecole-app</code></p>
+    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">Dupliquer → Configurer → Déployer sur Vercel + Neon</p>
+  </header>
+
+  <div class="container">
+
+    <!-- Services -->
+    <h2 style="margin-bottom: 1rem; color: var(--primary);">🔗 Les services utilisés</h2>
+    <div class="services">
+      <div class="service-card">
+        <h3>🗄️ Neon</h3>
+        <p>Base de données PostgreSQL cloud. Chaque client a son propre projet.</p>
+        <a href="https://console.neon.tech" target="_blank">Ouvrir Neon →</a>
+      </div>
+      <div class="service-card">
+        <h3>☁️ Vercel</h3>
+        <p>Hébergement de l'application Next.js. Chaque client a son propre projet.</p>
+        <a href="https://vercel.com/dashboard" target="_blank">Ouvrir Vercel →</a>
+      </div>
+      <div class="service-card">
+        <h3>💻 Vercel CLI</h3>
+        <p>Outil en ligne de commande pour déployer sans GitHub.</p>
+        <a href="https://vercel.com/docs/cli" target="_blank">Documentation CLI →</a>
+      </div>
+      <div class="service-card">
+        <h3>⏰ Vercel Cron</h3>
+        <p>Tâches automatiques planifiées (ex: nettoyage des archives > 10 ans).</p>
+        <a href="https://vercel.com/docs/cron-jobs" target="_blank">Documentation Cron →</a>
+      </div>
+      <div class="service-card">
+        <h3>🔐 JWT.io</h3>
+        <p>Comprendre les JSON Web Tokens utilisés pour l'authentification.</p>
+        <a href="https://jwt.io/introduction" target="_blank">En savoir plus →</a>
+      </div>
+    </div>
+
+    <!-- Concept -->
+    <div class="alert alert-info">
+      💡 <strong>Principe</strong> : vous avez un projet de référence <code>ecole-app</code> qui fonctionne. Pour chaque nouveau client, vous en faites une <strong>copie</strong>, vous configurez une nouvelle base Neon et un nouveau projet Vercel, puis vous déployez.
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PROCÉDURE PRINCIPALE -->
+    <!-- ============================================================ -->
+    <h2 style="margin: 2rem 0 1rem; color: var(--primary);">🚀 Procédure complète pour un nouveau client</h2>
+
+    <!-- Étape 1 : Copier le dossier -->
+    <div class="step" data-step="1">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Copier le dossier</h2>
+        <input type="checkbox" class="step-checkbox" data-step="1">
+      </div>
+      <div class="step-content">
+        <p>Sur votre bureau, vous avez <code>ecole-app</code> (votre projet de référence). Créez une copie pour le nouveau client :</p>
+        <pre><code>cd "C:\Users\Sahnoun HAWALA\Desktop"
+robocopy "ecole-app" "ecole-client-b" /E /XD node_modules .next .git<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <div class="info-box">
+          <h4>💡 Pourquoi robocopy et pas Copy-Item ?</h4>
+          <p><code>robocopy</code> est beaucoup plus rapide et exclut les dossiers lourds (<code>node_modules</code>, <code>.next</code>, <code>.git</code>) grâce à l'option <code>/XD</code>.</p>
+          <p>Si vous préférez <code>Copy-Item</code>, faites-le mais supprimez manuellement <code>node_modules</code>, <code>.next</code> et <code>.git</code> après.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 2 : Nettoyer le dossier -->
+    <div class="step" data-step="2">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Nettoyer le dossier copié</h2>
+        <input type="checkbox" class="step-checkbox" data-step="2">
+      </div>
+      <div class="step-content">
+        <p>Supprimez les fichiers liés à l'ancien client :</p>
+        <pre><code>cd "C:\Users\Sahnoun HAWALA\Desktop\ecole-client-b"
+Remove-Item ".env" -Force -ErrorAction SilentlyContinue
+Remove-Item ".env.local" -Force -ErrorAction SilentlyContinue
+Remove-Item ".vercel" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <div class="info-box">
+          <h4>🗑️ Pourquoi supprimer ces fichiers ?</h4>
+          <ul>
+            <li><strong><code>.env</code></strong> : contient les secrets de l'ancien client (à remplacer)</li>
+            <li><strong><code>.vercel</code></strong> : lie le dossier au projet Vercel de l'ancien client</li>
+            <li><strong><code>.next</code></strong> : cache de build (à regénérer)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 3 : Installer les dépendances -->
+    <div class="step" data-step="3">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Installer les dépendances</h2>
+        <input type="checkbox" class="step-checkbox" data-step="3">
+      </div>
+      <div class="step-content">
+        <pre><code>npm install<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p><strong>Cette commande va :</strong></p>
+        <ul style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Installer toutes les dépendances (<code>next</code>, <code>react</code>, <code>prisma</code>, <code>bcryptjs</code>, <code>jose</code>, <code>jspdf</code>, <code>tailwindcss</code>...)</li>
+          <li>Exécuter <code>postinstall</code> → <code>prisma generate</code></li>
+          <li>Prendre ~2-3 minutes</li>
+        </ul>
+        <div class="alert alert-success">
+          ✅ Résultat attendu : <code>added XXX packages in XXs</code> et <code>✔ Generated Prisma Client</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 4 : Créer le projet Neon -->
+    <div class="step" data-step="4">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Créer le projet Neon</h2>
+        <input type="checkbox" class="step-checkbox" data-step="4">
+      </div>
+      <div class="step-content">
+        <p>Rendez-vous sur <a href="https://console.neon.tech" target="_blank">console.neon.tech</a> et connectez-vous.</p>
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Cliquez sur <strong>"New Project"</strong></li>
+          <li>Nommez-le (ex: <code>ecole-client-b</code>)</li>
+          <li>Région : <strong>Frankfurt</strong></li>
+          <li>Cliquez sur <strong>Create</strong></li>
+          <li>Cliquez sur <strong>"Connect"</strong> → copiez la connection string (mode <strong>Pooled</strong>)</li>
+        </ol>
+        <div class="info-box">
+          <h4>🗄️ D'où vient cette URL ?</h4>
+          <p>Générée par <strong>Neon</strong> au moment de la création du projet. C'est l'adresse unique de la base de données du client.</p>
+          <p><strong>Format :</strong> <code>postgresql://neondb_owner:motdepasse@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require</code></p>
+        </div>
+        <div class="alert alert-warning">
+          ⚠️ Gardez cette URL précieusement. Elle deviendra la valeur de <code>DATABASE_URL</code>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 5 : Générer CONFIG_ENCRYPTION_KEY -->
+    <div class="step" data-step="5">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Générer une nouvelle CONFIG_ENCRYPTION_KEY</h2>
+        <input type="checkbox" class="step-checkbox" data-step="5">
+      </div>
+      <div class="step-content">
+        <p><strong>Cette clé doit être UNIQUE pour chaque client.</strong> Ne réutilisez jamais celle d'un autre client.</p>
+        <pre><code>node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p>Copiez la sortie (ex : <code>xY3kL9...==</code>).</p>
+        <div class="info-box">
+          <h4>🔐 Pourquoi une clé unique ?</h4>
+          <p>Cette clé est la <strong>clé maîtresse</strong> qui chiffre toute la configuration en base (AES-256-GCM). Si elle fuit, toutes les données chiffrées de ce client sont compromises. Utiliser la même clé pour tous les clients = une fuite = tous les clients compromis.</p>
+        </div>
+        <div class="alert alert-danger">
+          ⚠️ <strong>Ne perdez jamais cette clé.</strong> Sans elle, la config chiffrée du client est irrécupérable.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 6 : Créer .env -->
+    <div class="step" data-step="6">
+      <div class="step-header">
+        <div class="step-number">6</div>
+        <h2>Créer le fichier .env</h2>
+        <input type="checkbox" class="step-checkbox" data-step="6">
+      </div>
+      <div class="step-content">
+        <pre><code>cd "C:\Users\Sahnoun HAWALA\Desktop\ecole-client-b"
+notepad .env<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p>Collez ce contenu en <strong>remplaçant</strong> les valeurs :</p>
+        <pre><code>CONFIG_ENCRYPTION_KEY="COLLER_LA_CLE_GENEREE"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+DATABASE_URL="COLLER_URL_NEON_ICI"
+BOOTSTRAP_DATABASE_URL="COLLER_URL_NEON_ICI"
+BOOTSTRAP_ADMIN_EMAIL="admin@ecole-client-b.tn"
+BOOTSTRAP_ADMIN_PASSWORD="Admin123!"<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p><strong>Sauvegardez</strong> et fermez.</p>
+      </div>
+    </div>
+
+    <!-- Étape 7 : Migrations -->
+    <div class="step" data-step="7">
+      <div class="step-header">
+        <div class="step-number">7</div>
+        <h2>Appliquer les migrations Prisma</h2>
+        <input type="checkbox" class="step-checkbox" data-step="7">
+      </div>
+      <div class="step-content">
+        <pre><code>npx prisma migrate deploy<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <div class="alert alert-warning">
+          ⚠️ <strong>Utilisez <code>migrate deploy</code>, PAS <code>migrate dev</code>.</strong> <code>migrate dev</code> créerait une nouvelle migration (ce qui n'est pas nécessaire pour un nouveau client).
+        </div>
+        <p><strong>Résultat attendu :</strong></p>
+        <pre><code>Applying migration `xxx_init`
+All migrations have been successfully applied.</code></pre>
+        <div class="alert alert-info">
+          💡 Si erreur <code>P1001: Can't reach database server</code> → Neon est en pause. Allez sur console.neon.tech → SQL Editor → <code>SELECT 1;</code> pour le réveiller, puis relancez.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 8 : Bootstrap -->
+    <div class="step" data-step="8">
+      <div class="step-header">
+        <div class="step-number">8</div>
+        <h2>Bootstrap (config chiffrée + admin)</h2>
+        <input type="checkbox" class="step-checkbox" data-step="8">
+      </div>
+      <div class="step-content">
+        <pre><code>npm run bootstrap<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p><strong>Résultat attendu :</strong></p>
+        <pre><code>🚀 Bootstrap de la configuration...
+✅ Configuration chiffrée écrite en base
+✅ Admin créé : admin@ecole-client-b.tn / Admin123!</code></pre>
+      </div>
+    </div>
+
+    <!-- Étape 9 : Seed (optionnel) -->
+    <div class="step" data-step="9">
+      <div class="step-header">
+        <div class="step-number">9</div>
+        <h2>(Optionnel) Seed de données de test</h2>
+        <input type="checkbox" class="step-checkbox" data-step="9">
+      </div>
+      <div class="step-content">
+        <pre><code>npx prisma db seed<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <div class="alert alert-warning">
+          ⚠️ <strong>Ne lancez PAS cette commande pour un vrai client.</strong> Elle insère des données de test (prof@ecole.tn, eleve1@ecole.tn, etc.) que vous ne voulez pas en production.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 10 : Lancer en local -->
+    <div class="step" data-step="10">
+      <div class="step-header">
+        <div class="step-number">10</div>
+        <h2>Lancer le serveur en local (test)</h2>
+        <input type="checkbox" class="step-checkbox" data-step="10">
+      </div>
+      <div class="step-content">
+        <pre><code>$env:NODE_OPTIONS="--max-old-space-size=4096"
+npm run dev<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p>Ouvrez <strong>http://localhost:3000</strong> → login admin → <code>/admin/configuration</code> → personnaliser (logo, nom, année).</p>
+        <div class="alert alert-success">
+          ✅ Si tout fonctionne en local, on peut passer au déploiement.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 11 : Vercel -->
+    <div class="step" data-step="11">
+      <div class="step-header">
+        <div class="step-number">11</div>
+        <h2>Créer le projet Vercel</h2>
+        <input type="checkbox" class="step-checkbox" data-step="11">
+      </div>
+      <div class="step-content">
+        <pre><code>vercel login
+vercel link<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p>Répondez :</p>
+        <ul style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li><strong>Set up and deploy?</strong> → <code>y</code></li>
+          <li><strong>Which scope?</strong> → <code>elec-connect</code></li>
+          <li><strong>Link to existing project?</strong> → <code>n</code></li>
+          <li><strong>Project's name?</strong> → <code>ecole-client-b</code></li>
+          <li><strong>Directory?</strong> → <code>./</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Étape 12 : Variables Vercel -->
+    <div class="step" data-step="12">
+      <div class="step-header">
+        <div class="step-number">12</div>
+        <h2>Configurer les variables sur Vercel</h2>
+        <input type="checkbox" class="step-checkbox" data-step="12">
+      </div>
+      <div class="step-content">
+        <pre><code>vercel env add DATABASE_URL production --value "COLLER_URL_NEON" --sensitive --yes
+vercel env add CONFIG_ENCRYPTION_KEY production --value "COLLER_CLE_GENEREE" --sensitive --yes
+vercel env add NEXT_PUBLIC_APP_URL production --value "https://ecole-client-b.vercel.app" --yes
+vercel env add CRON_SECRET production --value "COLLER_CRON_SECRET" --sensitive --yes<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <div class="info-box">
+          <h4>🔑 D'où viennent ces valeurs ?</h4>
+          <ul>
+            <li><strong><code>DATABASE_URL</code></strong> → depuis <a href="https://console.neon.tech" target="_blank">console.neon.tech</a></li>
+            <li><strong><code>CONFIG_ENCRYPTION_KEY</code></strong> → générée à l'étape 5</li>
+            <li><strong><code>NEXT_PUBLIC_APP_URL</code></strong> → l'URL Vercel du projet (visible dans Overview après le 1er déploiement)</li>
+            <li><strong><code>CRON_SECRET</code></strong> → généré dans <code>/admin/configuration</code> (étape 14). Pour l'instant, mettez une valeur temporaire.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 13 : Déployer -->
+    <div class="step" data-step="13">
+      <div class="step-header">
+        <div class="step-number">13</div>
+        <h2>Déployer en production</h2>
+        <input type="checkbox" class="step-checkbox" data-step="13">
+      </div>
+      <div class="step-content">
+        <pre><code>vercel deploy --prod<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p><strong>Résultat attendu :</strong></p>
+        <pre><code>✅ Production: https://ecole-client-b.vercel.app</code></pre>
+      </div>
+    </div>
+
+    <!-- Étape 14 : CRON_SECRET -->
+    <div class="step" data-step="14" style="border-left-color: var(--purple);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--purple);">⏰</div>
+        <h2>Configurer le CRON_SECRET</h2>
+        <input type="checkbox" class="step-checkbox" data-step="14">
+      </div>
+      <div class="step-content">
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Ouvrez <code>https://ecole-client-b.vercel.app</code></li>
+          <li>Connectez-vous avec <code>admin@ecole-client-b.tn</code> / <code>Admin123!</code></li>
+          <li>Allez sur <code>/admin/configuration</code></li>
+          <li>Section <strong>⏰ Tâches automatiques (Cron)</strong></li>
+          <li>Cliquer <strong>🎲 Générer un secret aléatoire</strong></li>
+          <li>Cliquer <strong>📋 Copier</strong></li>
+          <li>Cliquer <strong>Enregistrer la configuration</strong></li>
+          <li>Retourner sur Vercel → <strong>Settings → Environment Variables</strong> → mettre à jour <code>CRON_SECRET</code></li>
+          <li><strong>Redeploy</strong></li>
+        </ol>
+        <div class="alert alert-purple">
+          ⚠️ Le secret doit être <strong>identique</strong> dans l'application et dans Vercel. Sinon, le cron retourne 401.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 15 : Personnaliser -->
+    <div class="step" data-step="15">
+      <div class="step-header">
+        <div class="step-number">15</div>
+        <h2>Personnaliser le client</h2>
+        <input type="checkbox" class="step-checkbox" data-step="15">
+      </div>
+      <div class="step-content">
+        <p>Dans l'application, allez dans :</p>
+        <ul style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li><code>/admin/configuration</code> → logo, nom de l'école, année scolaire</li>
+          <li><code>/admin/classes</code> → créer les classes</li>
+          <li><code>/admin/matieres</code> → créer les matières</li>
+          <li><code>/admin/salles</code> → créer les salles</li>
+          <li><code>/admin/utilisateurs</code> → créer les profs, élèves, parents</li>
+          <li><code>/admin/volume-horaire</code> → configurer les volumes horaires</li>
+          <li><code>/admin/emplois/generer</code> → générer l'emploi du temps</li>
+        </ul>
+        <div class="alert alert-success">
+          🎉 Le client est prêt à être utilisé !
+        </div>
+      </div>
+    </div>
+
+    <!-- Récapitulatif des commandes -->
+    <h2 style="margin: 3rem 0 1rem; color: var(--primary);">📋 Récapitulatif des commandes</h2>
+    <div class="info-box">
+      <h4>⚡ Toutes les commandes dans l'ordre</h4>
+      <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.8rem;"><code># 1. Copier le dossier
+cd "C:\Users\Sahnoun HAWALA\Desktop"
+robocopy "ecole-app" "ecole-client-b" /E /XD node_modules .next .git
+
+# 2. Nettoyer
+cd "ecole-client-b"
+Remove-Item ".env" -Force -ErrorAction SilentlyContinue
+Remove-Item ".env.local" -Force -ErrorAction SilentlyContinue
+Remove-Item ".vercel" -Recurse -Force -ErrorAction SilentlyContinue
+
+# 3. Installer les dépendances
+npm install
+
+# 4. (Manuel) Créer le projet Neon et copier l'URL
+
+# 5. Générer une nouvelle clé
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+
+# 6. (Manuel) Créer .env avec notepad
+
+# 7. Appliquer les migrations
+npx prisma migrate deploy
+
+# 8. Bootstrap
+npm run bootstrap
+
+# 9. (Optionnel) Seed
+npx prisma db seed
+
+# 10. Lancer en local
+$env:NODE_OPTIONS="--max-old-space-size=4096"
+npm run dev
+
+# 11. Vercel
+vercel login
+vercel link
+
+# 12. Variables d'environnement Vercel
+vercel env add DATABASE_URL production --value "..." --sensitive --yes
+vercel env add CONFIG_ENCRYPTION_KEY production --value "..." --sensitive --yes
+vercel env add NEXT_PUBLIC_APP_URL production --value "..." --yes
+vercel env add CRON_SECRET production --value "..." --sensitive --yes
+
+# 13. Déployer
+vercel deploy --prod</code></pre>
+    </div>
+
+    <!-- Points de vigilance -->
+    <h2 style="margin: 3rem 0 1rem; color: var(--primary);">⚠️ Points de vigilance</h2>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Sujet</th>
+          <th>Détail</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>robocopy vs Copy-Item</strong></td>
+          <td><code>robocopy</code> est beaucoup plus rapide et exclut les dossiers lourds</td>
+        </tr>
+        <tr>
+          <td><strong>CONFIG_ENCRYPTION_KEY unique</strong></td>
+          <td><strong>Ne réutilisez JAMAIS</strong> la clé d'un autre client. Une clé par client</td>
+        </tr>
+        <tr>
+          <td><strong>migrate deploy</strong></td>
+          <td>Pas <code>migrate dev</code> — sinon ça crée une nouvelle migration</td>
+        </tr>
+        <tr>
+          <td><strong>Neon en pause</strong></td>
+          <td>Réveillez avec <code>SELECT 1;</code> dans SQL Editor</td>
+        </tr>
+        <tr>
+          <td><strong>.env propre</strong></td>
+          <td>Le <code>.env</code> de l'école A ne doit <strong>jamais</strong> être copié</td>
+        </tr>
+        <tr>
+          <td><strong>.vercel supprimé</strong></td>
+          <td>Sinon, le déploiement irait sur le projet Vercel de l'école A</td>
+        </tr>
+        <tr>
+          <td><strong>Ne pas lancer le seed</strong></td>
+          <td>Pour un vrai client, ne lancez pas <code>prisma db seed</code> (données de test)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Checklist -->
+    <div class="checklist">
+      <h2>✅ Checklist finale</h2>
+      <div class="checklist-item">
+        <input type="checkbox" id="c1">
+        <label for="c1">Dossier copié (sans node_modules, .next, .git)</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c2">
+        <label for="c2">Fichiers <code>.env</code>, <code>.env.local</code> et <code>.vercel</code> supprimés</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c3">
+        <label for="c3"><code>npm install</code> exécuté avec succès</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c4">
+        <label for="c4">Projet Neon créé et URL copiée</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c5">
+        <label for="c5">Nouvelle <code>CONFIG_ENCRYPTION_KEY</code> générée</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c6">
+        <label for="c6">Fichier <code>.env</code> créé avec les bonnes valeurs</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c7">
+        <label for="c7"><code>npx prisma migrate deploy</code> appliqué</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c8">
+        <label for="c8"><code>npm run bootstrap</code> exécuté (admin créé)</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c9">
+        <label for="c9">Test local réussi sur <code>http://localhost:3000</code></label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c10">
+        <label for="c10">Projet Vercel lié (<code>vercel link</code>)</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c11">
+        <label for="c11">4 variables d'environnement configurées sur Vercel</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c12">
+        <label for="c12"><code>vercel deploy --prod</code> réussi</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c13">
+        <label for="c13"><code>CRON_SECRET</code> généré et ajouté dans Vercel</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c14">
+        <label for="c14">Logo, nom et classes configurés dans l'application</label>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    ÉcoleApp — Guide de déploiement multi-clients · Fait avec ❤️
+  </footer>
+
+  <script>
+    const checkboxes = document.querySelectorAll('.step-checkbox');
+    const progressBar = document.getElementById('progressBar');
+
+    function updateProgress() {
+      const total = checkboxes.length;
+      const checked = Array.from(checkboxes).filter(c => c.checked).length;
+      const percent = (checked / total) * 100;
+      progressBar.style.width = percent + '%';
+
+      checkboxes.forEach(cb => {
+        const step = cb.closest('.step');
+        if (cb.checked) step.classList.add('completed');
+        else step.classList.remove('completed');
+      });
+
+      const state = {};
+      checkboxes.forEach(cb => state[cb.dataset.step] = cb.checked);
+      localStorage.setItem('ecoleapp-guide-state', JSON.stringify(state));
+    }
+
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', updateProgress);
+    });
+
+    const saved = localStorage.getItem('ecoleapp-guide-state');
+    if (saved) {
+      const state = JSON.parse(saved);
+      checkboxes.forEach(cb => {
+        if (state[cb.dataset.step]) cb.checked = true;
+      });
+    }
+    updateProgress();
+
+    function copyCode(btn) {
+      const code = btn.parentElement.querySelector('code').childNodes[0].textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = '✅ Copié !';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copier';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    const checklistItems = document.querySelectorAll('.checklist-item input');
+    checklistItems.forEach(item => {
+      item.addEventListener('change', () => {
+        const state = {};
+        checklistItems.forEach(i => state[i.id] = i.checked);
+        localStorage.setItem('ecoleapp-checklist', JSON.stringify(state));
+      });
+    });
+    const savedChecklist = localStorage.getItem('ecoleapp-checklist');
+    if (savedChecklist) {
+      const state = JSON.parse(savedChecklist);
+      checklistItems.forEach(i => { if (state[i.id]) i.checked = true; });
+    }
+  </script>
+</body>
+</html>

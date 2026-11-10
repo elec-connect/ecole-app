@@ -10,6 +10,8 @@ export const GET = withAdmin(async () => {
     appName: config.appName,
     anneeScolaireCourante: config.anneeScolaireCourante,
     logoUrl: config.logoUrl ?? '',
+    cronSecret: config.cronSecret ? '********' : '',
+    configPassword: config.configPassword ? '********' : '',
   });
 });
 

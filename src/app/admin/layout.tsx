@@ -16,10 +16,11 @@ const ITEMS = [
   { href: '/admin/emplois', label: 'Emplois du temps', icon: '🗓️' },
   { href: '/admin/emplois/generer', label: 'Générer emploi', icon: '🤖' },
   { href: '/admin/moyennes', label: 'Moyennes', icon: '📈' },
+  { href: '/admin/archives', label: 'Archives', icon: '📦' },
   { href: '/admin/configuration', label: 'Configuration', icon: '⚙️' },
 ];
 
-export default async function Layout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session || session.role !== 'ADMIN') redirect('/login');
 
