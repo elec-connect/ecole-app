@@ -40,6 +40,7 @@ const EMPTY_FORM = {
   id: '',
   email: '',
   motDePasse: '',
+  confirmMotDePasse: '',
   nom: '',
   prenom: '',
   role: 'ETUDIANT' as Role,
@@ -161,6 +162,12 @@ export default function UtilisateursPage() {
     setLoading(true);
     setMessage('');
 
+    if (form.motDePasse !== form.confirmMotDePasse) {
+      setLoading(false);
+      setMessage('❌ Les mots de passe ne correspondent pas.');
+      return;
+    }
+
     const url = edition ? '/api/utilisateurs/' + form.id : '/api/utilisateurs';
     const method = edition ? 'PUT' : 'POST';
 
@@ -241,6 +248,7 @@ export default function UtilisateursPage() {
       id: u.id,
       email: u.email,
       motDePasse: '',
+      confirmMotDePasse: '',
       nom: u.nom,
       prenom: u.prenom,
       role: u.role,
@@ -324,40 +332,77 @@ export default function UtilisateursPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
               </div>
+
+              {/* Colonne 1 : Mot de passe + Confirmation empilés */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {edition ? 'Nouveau mot de passe (laisser vide pour ne pas changer)' : form.role === 'ETUDIANT' || form.role === 'PARENT' ? 'Mot de passe (laisser vide = prenom-nom)' : 'Mot de passe'}
+                  </label>
+                  <input
+                    type="password"
+                    value={form.motDePasse}
+                    onChange={(e) => setForm({ ...form, motDePasse: e.target.value })}
+                    placeholder={!edition && (form.role === 'ETUDIANT' || form.role === 'PARENT') ? 'Auto : prenom-nom (ex: ahmed-benali)' : edition ? 'Inchangé si vide' : '6 caractères minimum'}
+                    required={!edition && form.role !== 'ETUDIANT' && form.role !== 'PARENT'}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                  {!edition && (form.role === 'ETUDIANT' || form.role === 'PARENT') && (
+                    <p className="text-xs text-gray-500 mt-1">💡 Laissez vide pour générer automatiquement <code>prenom-nom</code></p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirmer le mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    value={form.confirmMotDePasse}
+                    onChange={(e) => setForm({ ...form, confirmMotDePasse: e.target.value })}
+                    placeholder="Retapez le mot de passe"
+                    className={
+                      'w-full border rounded-lg px-3 py-2 text-sm ' +
+                      (form.confirmMotDePasse && form.motDePasse !== form.confirmMotDePasse
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300')
+                    }
+                  />
+                  {form.confirmMotDePasse && form.motDePasse !== form.confirmMotDePasse && (
+                    <p className="text-xs text-red-600 mt-1">⚠️ Les mots de passe ne correspondent pas.</p>
+                  )}
+                  {form.confirmMotDePasse && form.motDePasse === form.confirmMotDePasse && form.motDePasse.length >= 6 && (
+                    <p className="text-xs text-green-600 mt-1">✅ Les mots de passe correspondent.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Colonne 2 : Rôle */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {edition ? 'Nouveau mot de passe (laisser vide pour ne pas changer)' : form.role === 'ETUDIANT' || form.role === 'PARENT' ? 'Mot de passe (laisser vide = prenom-nom)' : 'Mot de passe'}
-                </label>
-                <input type="password" value={form.motDePasse} onChange={(e) => setForm({ ...form, motDePasse: e.target.value })} placeholder={!edition && (form.role === 'ETUDIANT' || form.role === 'PARENT') ? 'Auto : prenom-nom (ex: ahmed-benali)' : edition ? 'Inchangé si vide' : '6 caractères minimum'} required={!edition && form.role !== 'ETUDIANT' && form.role !== 'PARENT'} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                {!edition && (form.role === 'ETUDIANT' || form.role === 'PARENT') && (
-                  <p className="text-xs text-gray-500 mt-1">💡 Laissez vide pour générer automatiquement <code>prenom-nom</code></p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
+                <select
+                  value={form.role}
+                  onChange={(e) =>
+                    setForm({ ...form, role: e.target.value as Role, matiereIds: [], emailParent: '', classeId: '' })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="ETUDIANT">Élève</option>
+                  <option value="PARENT">Parent</option>
+                  {isSuperAdmin && (
+                    <>
+                      <option value="PROFESSEUR">Professeur</option>
+                      <option value="ADMIN">Administrateur</option>
+                      <option value="SUPER_ADMIN">Super Administrateur</option>
+                    </>
+                  )}
+                </select>
+                {isAdmin && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 En tant qu'administrateur, vous pouvez créer uniquement des élèves et des parents.
+                  </p>
                 )}
               </div>
-              <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
-  <select
-    value={form.role}
-    onChange={(e) =>
-      setForm({ ...form, role: e.target.value as Role, matiereIds: [], emailParent: '', classeId: '' })
-    }
-    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-  >
-    <option value="ETUDIANT">Élève</option>
-    <option value="PARENT">Parent</option>
-    {isSuperAdmin && (
-      <>
-        <option value="PROFESSEUR">Professeur</option>
-        <option value="ADMIN">Administrateur</option>
-        <option value="SUPER_ADMIN">Super Administrateur</option>
-      </>
-    )}
-  </select>
-  {isAdmin && (
-    <p className="text-xs text-gray-500 mt-1">
-      💡 En tant qu'administrateur, vous pouvez créer uniquement des élèves et des parents.
-    </p>
-  )}
-</div>
             </div>
 
             {form.role === 'ETUDIANT' && (
