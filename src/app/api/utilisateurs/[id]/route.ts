@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getPrismaDynamic } from '@/lib/prisma-dynamic';
-import { withAdmin } from '@/lib/api-helpers';
+import { withSuperAdmin, withAdminOrSuper } from '@/lib/api-helpers';
 import bcrypt from 'bcryptjs';
 
-export const GET = withAdmin(async (_req, _session, ctx) => {
+// GET : Admin et Super Admin peuvent voir
+export const GET = withAdminOrSuper(async (_req, _session, ctx) => {
   const { id } = await ctx.params;
   const db = await getPrismaDynamic();
   const user = await db.user.findUnique({
@@ -24,14 +25,7 @@ export const GET = withAdmin(async (_req, _session, ctx) => {
       },
       enfants: {
         include: {
-          eleve: {
-            select: {
-              id: true,
-              nom: true,
-              prenom: true,
-              email: true,
-            },
-          },
+          eleve: { select: { id: true, nom: true, prenom: true, email: true } },
         },
       },
     },
@@ -40,10 +34,29 @@ export const GET = withAdmin(async (_req, _session, ctx) => {
   return NextResponse.json(user);
 });
 
-export const PUT = withAdmin(async (req, _session, ctx) => {
+// PUT : Super Admin (tout) | Admin (élèves et parents uniquement)
+export const PUT = withAdminOrSuper(async (req, session, ctx) => {
   const { id } = await ctx.params;
   const body = await req.json();
   const db = await getPrismaDynamic();
+
+  // ⭐ Sécurité : si c'est un ADMIN, il ne peut éditer QUE les élèves et les parents
+  if (session.role === 'ADMIN') {
+    const cible = await db.user.findUnique({ where: { id } });
+    if (!cible || (cible.role !== 'ETUDIANT' && cible.role !== 'PARENT')) {
+      return NextResponse.json(
+        { erreur: 'Un administrateur ne peut éditer que les élèves ou les parents.' },
+        { status: 403 }
+      );
+    }
+    // Un Admin ne peut pas changer le rôle d'un utilisateur (sécurité)
+    if (body.role && body.role !== cible.role) {
+      return NextResponse.json(
+        { erreur: 'Un administrateur ne peut pas modifier le rôle.' },
+        { status: 403 }
+      );
+    }
+  }
 
   const data: any = {
     ...(body.email && { email: body.email }),
@@ -64,18 +77,16 @@ export const PUT = withAdmin(async (req, _session, ctx) => {
     data.matieres = { set: [] };
   }
 
-  // ⭐ Mettre à jour l'inscription si classeId fourni
-  if (body.classeId !== undefined && body.role === 'ETUDIANT') {
+  // Mise à jour de l'inscription (classe)
+  if (body.classeId !== undefined && (body.role === 'ETUDIANT' || session.role === 'ADMIN')) {
     const user = await db.user.findUnique({ where: { id }, include: { inscriptions: true } });
     const inscriptionActuelle = user?.inscriptions[0];
 
     if (body.classeId === '' || body.classeId === null) {
-      // Retirer l'élève de sa classe
       if (inscriptionActuelle) {
         await db.inscription.delete({ where: { id: inscriptionActuelle.id } });
       }
     } else if (inscriptionActuelle) {
-      // Changer de classe
       if (inscriptionActuelle.classeId !== body.classeId) {
         await db.inscription.update({
           where: { id: inscriptionActuelle.id },
@@ -83,15 +94,10 @@ export const PUT = withAdmin(async (req, _session, ctx) => {
         });
       }
     } else {
-      // Créer une nouvelle inscription
       const classe = await db.classe.findUnique({ where: { id: body.classeId } });
       if (classe) {
         await db.inscription.create({
-          data: {
-            etudiantId: id,
-            classeId: body.classeId,
-            anneeScolaire: classe.anneeScolaire,
-          },
+          data: { etudiantId: id, classeId: body.classeId, anneeScolaire: classe.anneeScolaire },
         });
       }
     }
@@ -116,10 +122,14 @@ export const PUT = withAdmin(async (req, _session, ctx) => {
   return NextResponse.json(user);
 });
 
-export const DELETE = withAdmin(async (_req, session, ctx) => {
+// DELETE : UNIQUEMENT Super Admin
+export const DELETE = withSuperAdmin(async (_req, session, ctx) => {
   const { id } = await ctx.params;
   if (id === session.id) {
-    return NextResponse.json({ erreur: 'Impossible de supprimer votre propre compte' }, { status: 400 });
+    return NextResponse.json(
+      { erreur: 'Impossible de supprimer votre propre compte' },
+      { status: 400 }
+    );
   }
 
   const db = await getPrismaDynamic();

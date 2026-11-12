@@ -22,7 +22,11 @@ const ITEMS = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
-  if (!session || session.role !== 'ADMIN') redirect('/login');
+  
+  // ⭐ Accepter SUPER_ADMIN et ADMIN
+  if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    redirect('/login');
+  }
 
   const db = await getPrismaDynamic();
   const user = await db.user.findUnique({ where: { id: session.id } });
@@ -34,7 +38,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex-1 flex flex-col">
         <Header
           nomUtilisateur={user ? user.prenom + ' ' + user.nom : undefined}
-          role="Administrateur"
+          role={session.role === 'SUPER_ADMIN' ? 'Super Administrateur' : 'Administrateur'}
           homeHref="/admin/dashboard"
           homeLabel="Tableau de bord"
         />

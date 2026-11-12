@@ -23,13 +23,25 @@ export default function ClassesPage() {
   const [message, setMessage] = useState('');
 
   async function charger() {
+  try {
     const [r1, r2] = await Promise.all([
       fetch('/api/classes'),
       fetch('/api/utilisateurs?role=PROFESSEUR'),
     ]);
-    setClasses(await r1.json());
-    setProfs(await r2.json());
+
+    const dataClasses = await r1.json();
+    const dataProfs = await r2.json();
+
+    // ⭐ Sécurité : vérifier que c'est bien un tableau
+    setClasses(Array.isArray(dataClasses) ? dataClasses : []);
+    setProfs(Array.isArray(dataProfs) ? dataProfs : []);
+
+  } catch (e) {
+    console.error('Erreur chargement classes:', e);
+    setClasses([]);
+    setProfs([]);
   }
+}
 
   useEffect(() => { charger(); }, []);
 

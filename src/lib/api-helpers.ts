@@ -4,13 +4,14 @@ import { getSession, PayloadToken } from './auth';
 export type Handler = (
   req: NextRequest,
   session: PayloadToken,
-  ctx: any // ⚠️ Temporaire pour contourner le typage strict de Next.js 15
+  ctx: { params: Promise<Record<string, string>> }
 ) => Promise<NextResponse> | NextResponse;
 
 export function withRoles(roles: string[], handler: Handler) {
-  return async (
+  // ⭐ On caste la fonction retournée pour satisfaire Next.js 15
+  return (async (
     req: NextRequest,
-    ctx: any = { params: Promise.resolve({}) }
+    ctx: { params: Promise<Record<string, string>> } = { params: Promise.resolve({}) }
   ): Promise<NextResponse> => {
     const session = await getSession();
 
@@ -36,10 +37,26 @@ export function withRoles(roles: string[], handler: Handler) {
         { status: 500 }
       );
     }
-  };
+  }) as (req: NextRequest, ctx: { params: Promise<Record<string, string>> }) => Promise<NextResponse>;
 }
 
-export const withAdmin = (handler: Handler) => withRoles(['ADMIN'], handler);
+// ============================================================
+// Helpers standards
+// ============================================================
+
+export const withAdmin = (handler: Handler) => withRoles(['SUPER_ADMIN', 'ADMIN'], handler);
+
 export const withProf = (handler: Handler) => withRoles(['PROFESSEUR'], handler);
+
 export const withAuth = (handler: Handler) =>
-  withRoles(['ADMIN', 'PROFESSEUR', 'ETUDIANT', 'PARENT'], handler);
+  withRoles(['SUPER_ADMIN', 'ADMIN', 'PROFESSEUR', 'ETUDIANT', 'PARENT'], handler);
+
+// ============================================================
+// ⭐ Helpers pour SUPER_ADMIN
+// ============================================================
+
+export const withSuperAdmin = (handler: Handler) =>
+  withRoles(['SUPER_ADMIN'], handler);
+
+export const withAdminOrSuper = (handler: Handler) =>
+  withRoles(['SUPER_ADMIN', 'ADMIN'], handler);

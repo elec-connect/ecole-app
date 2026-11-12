@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getPrismaDynamic } from '@/lib/prisma-dynamic';
 import { withAdmin, withRoles } from '@/lib/api-helpers';
 
-export const GET = withRoles(['ADMIN', 'PROFESSEUR'], async (req) => {
+export const GET = withRoles(['SUPER_ADMIN', 'ADMIN', 'PROFESSEUR'], async (req) => {
   const { searchParams } = new URL(req.url);
   const anneeScolaire = searchParams.get('anneeScolaire');
 

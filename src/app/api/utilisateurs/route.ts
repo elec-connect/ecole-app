@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getPrismaDynamic } from '@/lib/prisma-dynamic';
-import { withAdmin } from '@/lib/api-helpers';
+import { withSuperAdmin, withAdminOrSuper } from '@/lib/api-helpers';
 import bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 
-export const GET = withAdmin(async (req) => {
+// GET : Admin et Super Admin
+export const GET = withAdminOrSuper(async (req) => {
   const { searchParams } = new URL(req.url);
   const role = searchParams.get('role') as Role | null;
 
@@ -49,9 +50,14 @@ export const GET = withAdmin(async (req) => {
   return NextResponse.json(users);
 });
 
-export const POST = withAdmin(async (req) => {
-  const { email, motDePasse, nom, prenom, role, matiereIds, emailParent, classeId } =
-    await req.json();
+// POST : UNIQUEMENT Super Admin
+export const POST = withAdminOrSuper(async (req, session) => {
+  const { email, motDePasse, nom, prenom, role, matiereIds, emailParent, classeId } = await req.json();
+
+  // ⭐ Sécurité : un ADMIN ne peut créer QUE des élèves ou des parents
+  if (session.role === 'ADMIN' && role !== 'ETUDIANT' && role !== 'PARENT') {
+    return NextResponse.json({ erreur: 'Un administrateur ne peut créer que des élèves ou des parents.' }, { status: 403 });
+  }
 
   if (!email || !nom || !prenom || !role) {
     return NextResponse.json({ erreur: 'Champs requis manquants' }, { status: 400 });
@@ -87,7 +93,6 @@ export const POST = withAdmin(async (req) => {
       ...(role === 'PROFESSEUR' && Array.isArray(matiereIds) && matiereIds.length > 0
         ? { matieres: { connect: matiereIds.map((id: string) => ({ id })) } }
         : {}),
-      // ⭐ Inscrire l'élève dans la classe
       ...(role === 'ETUDIANT' && classeId
         ? {
             inscriptions: {
