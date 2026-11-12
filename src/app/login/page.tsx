@@ -87,12 +87,7 @@ export default function LoginPage() {
           {loading ? 'Connexion...' : 'Se connecter'}
         </button>
 
-        <div className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">
-          <p className="font-medium mb-1">Comptes de test</p>
-          <p>admin@ecole.tn / Admin123!</p>
-          <p>prof@ecole.tn / prof123</p>
-          <p>eleve1@ecole.tn / eleve123</p>
-        </div>
+        
       </form>
     </div>
   );

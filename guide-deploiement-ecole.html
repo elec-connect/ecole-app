@@ -724,7 +724,176 @@ vercel deploy --prod</code></pre>
       </tbody>
     </table>
 
-    <!-- Checklist -->
+    <!-- ============================================================ -->
+    <!-- NOUVELLE SECTION : DOMAINE & DÉPLOIEMENT SANS GITHUB -->
+    <!-- ============================================================ -->
+
+    <h2 style="margin: 4rem 0 1rem; color: var(--primary); border-top: 3px solid var(--primary); padding-top: 2rem;">
+      🌐 Domaine personnalisé & Déploiement sans GitHub
+    </h2>
+
+    <div class="alert alert-info">
+      💡 Vous pouvez utiliser votre <strong>propre domaine</strong> (ex: <code>ecole-client-b.tn</code>) et déployer <strong>directement sur Vercel sans passer par GitHub</strong>. Voici la procédure complète.
+    </div>
+
+    <!-- Étape A : Configurer le domaine -->
+    <div class="step" data-step="domaine-1" style="border-left-color: var(--success);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--success);">A</div>
+        <h2>Configurer un domaine personnalisé</h2>
+        <input type="checkbox" class="step-checkbox" data-step="domaine-1">
+      </div>
+      <div class="step-content">
+        <p>Vous avez acheté un domaine chez OVH (ou un autre registrar). Voici comment le relier à Vercel.</p>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">A.1 — Ajouter le domaine dans Vercel</h3>
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Vercel → votre projet → <strong>Settings → Domains</strong></li>
+          <li>Cliquez sur <strong>"Add Domain"</strong></li>
+          <li>Tapez <code>ecole-client-b.tn</code></li>
+          <li>Ajoutez aussi <code>www.ecole-client-b.tn</code></li>
+        </ol>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">A.2 — Récupérer les valeurs DNS</h3>
+        <p>Vercel vous affiche :</p>
+        <pre><code>Type    Name    Value
+A       @       76.76.21.21          (ou une IP 216.198.x.x)
+CNAME   www     cname.vercel-dns.com</code></pre>
+        <div class="alert alert-warning">
+          ⚠️ Utilisez <strong>exactement</strong> les valeurs affichées dans Vercel. Ne copiez pas une IP trouvée sur un forum.
+        </div>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">A.3 — Configurer la Zone DNS chez OVH</h3>
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>OVH → <strong>Web Cloud → Domaines → ecole-client-b.tn → Zone DNS</strong></li>
+          <li><strong>Supprimez</strong> tout ancien enregistrement A pour <code>@</code> et <code>www</code></li>
+          <li><strong>Ajoutez</strong> l'enregistrement A (fourni par Vercel) pour <code>@</code></li>
+          <li><strong>Ajoutez</strong> l'enregistrement CNAME pour <code>www</code></li>
+          <li>Ne touchez <strong>pas</strong> aux MX ni aux NS (pour ne pas casser les emails)</li>
+        </ol>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">A.4 — Attendre et vérifier</h3>
+        <p>La propagation DNS prend de quelques minutes à 24h. Vercel affichera <strong>"Valid Configuration"</strong> et générera automatiquement le certificat SSL (HTTPS).</p>
+
+        <div class="alert alert-success">
+          ✅ Une fois validé, votre site est accessible sur <code>https://www.ecole-client-b.tn</code> avec un certificat SSL gratuit.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape B : Déployer sans GitHub -->
+    <div class="step" data-step="domaine-2" style="border-left-color: var(--warning);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--warning);">B</div>
+        <h2>Déployer sans GitHub (via CLI)</h2>
+        <input type="checkbox" class="step-checkbox" data-step="domaine-2">
+      </div>
+      <div class="step-content">
+        <p>Si vous ne voulez <strong>pas</strong> créer un dépôt GitHub pour chaque client, vous pouvez déployer directement depuis votre machine avec Vercel CLI.</p>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">B.1 — Installer et se connecter (une seule fois)</h3>
+        <pre><code>npm install -g vercel
+vercel login<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">B.2 — Lier le dossier au projet</h3>
+        <pre><code>cd "C:\Users\Sahnoun HAWALA\Desktop\ecole-client-b"
+vercel link<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p>Répondez :</p>
+        <ul style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li><strong>Set up and deploy?</strong> → <code>y</code></li>
+          <li><strong>Which scope?</strong> → votre compte</li>
+          <li><strong>Link to existing project?</strong> → <code>n</code></li>
+          <li><strong>Project's name?</strong> → <code>ecole-client-b</code></li>
+          <li><strong>Directory?</strong> → <code>./</code></li>
+        </ul>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">B.3 — Ajouter les variables d'environnement</h3>
+        <pre><code>vercel env add DATABASE_URL production --value "postgresql://..." --sensitive --yes
+vercel env add CONFIG_ENCRYPTION_KEY production --value "VOTRE_CLE" --sensitive --yes
+vercel env add NEXT_PUBLIC_APP_URL production --value "https://ecole-client-b.tn" --yes
+vercel env add CRON_SECRET production --value "VOTRE_CRON_SECRET" --sensitive --yes<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">B.4 — Déployer en production</h3>
+        <pre><code>vercel deploy --prod<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+        <p><strong>Résultat attendu :</strong></p>
+        <pre><code>✅ Production: https://ecole-client-b.tn</code></pre>
+
+        <div class="info-box">
+          <h4>🔄 Pour les mises à jour futures (sans GitHub)</h4>
+          <p>À chaque modification du code, il suffit de relancer :</p>
+          <pre><code>vercel deploy --prod<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
+          <p>Vercel va re-builder votre code local et le déployer. Pas besoin de Git.</p>
+        </div>
+
+        <div class="alert alert-success">
+          ✅ Vous avez un déploiement continu sans GitHub, directement depuis votre machine.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape C : Mise à jour du domaine dans la config -->
+    <div class="step" data-step="domaine-3" style="border-left-color: var(--purple);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--purple);">C</div>
+        <h2>Mettre à jour NEXT_PUBLIC_APP_URL</h2>
+        <input type="checkbox" class="step-checkbox" data-step="domaine-3">
+      </div>
+      <div class="step-content">
+        <p>Puisque vous utilisez maintenant un domaine personnalisé, il faut mettre à jour l'URL dans Vercel :</p>
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Vercel → projet → <strong>Settings → Environment Variables</strong></li>
+          <li>Modifiez <code>NEXT_PUBLIC_APP_URL</code> avec <code>https://ecole-client-b.tn</code></li>
+          <li>Redéployez : <code>vercel deploy --prod</code></li>
+        </ol>
+
+        <div class="alert alert-warning">
+          ⚠️ Si vous oubliez cette étape, certaines redirections internes (comme après login) peuvent pointer vers l'ancienne URL Vercel au lieu du domaine personnalisé.
+        </div>
+      </div>
+    </div>
+
+    <!-- Résumé visuel -->
+    <div class="info-box">
+      <h4>📊 Résumé : 2 méthodes de déploiement</h4>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>Avec GitHub</th>
+            <th>Sans GitHub (CLI)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Dépôt GitHub requis</td>
+            <td class="bad">Oui</td>
+            <td class="good">Non</td>
+          </tr>
+          <tr>
+            <td>Déploiement automatique au push</td>
+            <td class="good">Oui</td>
+            <td class="bad">Non (manuel)</td>
+          </tr>
+          <tr>
+            <td>Commande pour déployer</td>
+            <td><code>git push</code></td>
+            <td><code>vercel deploy --prod</code></td>
+          </tr>
+          <tr>
+            <td>Historique des versions</td>
+            <td class="good">Git</td>
+            <td class="mid">Vercel (dashboard)</td>
+          </tr>
+          <tr>
+            <td>Rollback</td>
+            <td class="good">Git revert</td>
+            <td class="good">Vercel → Redeploy ancien</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Checklist finale -->
     <div class="checklist">
       <h2>✅ Checklist finale</h2>
       <div class="checklist-item">
@@ -782,6 +951,14 @@ vercel deploy --prod</code></pre>
       <div class="checklist-item">
         <input type="checkbox" id="c14">
         <label for="c14">Logo, nom et classes configurés dans l'application</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c15">
+        <label for="c15">Domaine personnalisé configuré (Zone DNS OVH + Vercel)</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c16">
+        <label for="c16"><code>NEXT_PUBLIC_APP_URL</code> mis à jour avec le domaine final</label>
       </div>
     </div>
 
