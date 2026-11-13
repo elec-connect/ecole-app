@@ -26,7 +26,8 @@
     "jspdf-autotable": "^5.0.9",
     "next": "15.1.11",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "resend": "^6.38.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
