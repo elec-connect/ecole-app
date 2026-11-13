@@ -10,6 +10,8 @@ type ConfigForm = {
   logoUrl: string;
   cronSecret: string;
   configPassword: string;
+  resendApiKey: string;
+  emailFrom: string;
 };
 
 const initial: ConfigForm = {
@@ -20,6 +22,8 @@ const initial: ConfigForm = {
   logoUrl: '',
   cronSecret: '',
   configPassword: '',
+  resendApiKey: '',
+  emailFrom: '',
 };
 
 export default function ConfigurationPage() {
@@ -30,11 +34,41 @@ export default function ConfigurationPage() {
   const [message, setMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Indique quels champs sensibles sont déjà configurés en base
+  const [configured, setConfigured] = useState({
+    databaseUrl: false,
+    jwtSecret: false,
+    cronSecret: false,
+    configPassword: false,
+    resendApiKey: false,
+  });
+
   useEffect(() => {
     fetch('/api/config')
       .then((r) => r.json())
       .then((data) => {
-        setForm({ ...initial, ...data });
+        setConfigured({
+          databaseUrl: Boolean(data.databaseUrl && data.databaseUrl !== '********'),
+          jwtSecret: Boolean(data.jwtSecret),
+          cronSecret: Boolean(data.cronSecret),
+          configPassword: Boolean(data.configPassword),
+          resendApiKey: Boolean(data.resendApiKey),
+        });
+
+        // On ne pré-remplit JAMAIS les champs sensibles avec la valeur masquée.
+        // Vide = "ne pas modifier" (géré côté serveur).
+        setForm({
+          ...initial,
+          appName: data.appName ?? initial.appName,
+          anneeScolaireCourante: data.anneeScolaireCourante ?? initial.anneeScolaireCourante,
+          logoUrl: data.logoUrl ?? '',
+          emailFrom: data.emailFrom ?? '',
+          databaseUrl: '',
+          jwtSecret: '',
+          cronSecret: '',
+          configPassword: '',
+          resendApiKey: '',
+        });
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -49,14 +83,48 @@ export default function ConfigurationPage() {
     setSaving(true);
     setMessage('');
 
+    // On n'envoie que les champs réellement modifiés + les champs non sensibles.
+    // Les champs sensibles vides ne sont pas envoyés → le serveur conserve l'ancienne valeur.
+    const payload: Record<string, string> = {
+      appName: form.appName,
+      anneeScolaireCourante: form.anneeScolaireCourante,
+      logoUrl: form.logoUrl,
+      emailFrom: form.emailFrom,
+    };
+    if (form.databaseUrl.trim()) payload.databaseUrl = form.databaseUrl.trim();
+    if (form.jwtSecret.trim()) payload.jwtSecret = form.jwtSecret.trim();
+    if (form.cronSecret.trim()) payload.cronSecret = form.cronSecret.trim();
+    if (form.configPassword.trim()) payload.configPassword = form.configPassword.trim();
+    if (form.resendApiKey.trim()) payload.resendApiKey = form.resendApiKey.trim();
+
     const res = await fetch('/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     });
 
     setSaving(false);
-    setMessage(res.ok ? '✅ Configuration enregistrée' : '❌ Erreur');
+    if (res.ok) {
+      setMessage('✅ Configuration enregistrée');
+      // On vide les champs sensibles après sauvegarde (ils sont maintenant en base)
+      setForm((f) => ({
+        ...f,
+        databaseUrl: '',
+        jwtSecret: '',
+        cronSecret: '',
+        configPassword: '',
+        resendApiKey: '',
+      }));
+      setConfigured((c) => ({
+        databaseUrl: c.databaseUrl || Boolean(payload.databaseUrl),
+        jwtSecret: c.jwtSecret || Boolean(payload.jwtSecret),
+        cronSecret: c.cronSecret || Boolean(payload.cronSecret),
+        configPassword: c.configPassword || Boolean(payload.configPassword),
+        resendApiKey: c.resendApiKey || Boolean(payload.resendApiKey),
+      }));
+    } else {
+      setMessage('❌ Erreur lors de l\'enregistrement');
+    }
   }
 
   async function uploaderLogo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -106,9 +174,7 @@ export default function ConfigurationPage() {
   async function genererCronSecret() {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
-    const secret = Array.from(array)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+    const secret = Array.from(array).map((b) => b.toString(16).padStart(2, '0')).join('');
     setForm((f) => ({ ...f, cronSecret: secret }));
   }
 
@@ -120,6 +186,12 @@ export default function ConfigurationPage() {
   }
 
   if (loading) return <div className="p-8 text-gray-500">Chargement…</div>;
+
+  const BadgeConfigure = () => (
+    <span className="inline-block ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+      ✅ déjà configuré
+    </span>
+  );
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -195,7 +267,10 @@ export default function ConfigurationPage() {
 
         {/* Base de données */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-3">
-          <h2 className="font-semibold text-lg">🗄️ Base de données</h2>
+          <h2 className="font-semibold text-lg">
+            🗄️ Base de données
+            {configured.databaseUrl && <BadgeConfigure />}
+          </h2>
           <input
             type="text"
             value={form.databaseUrl}
@@ -203,7 +278,12 @@ export default function ConfigurationPage() {
             placeholder="postgresql://..."
             className="w-full border border-gray-300 rounded px-3 py-2 font-mono text-xs"
           />
-          <p className="text-xs text-gray-500">Laisser vide pour ne pas modifier.</p>
+          <p className="text-xs text-gray-500">
+            Laisser vide pour ne pas modifier.{' '}
+            {configured.databaseUrl && (
+              <span className="text-green-700">Une URL est déjà configurée.</span>
+            )}
+          </p>
           <a
             href="https://neon.tech"
             target="_blank"
@@ -216,7 +296,10 @@ export default function ConfigurationPage() {
 
         {/* Authentification */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-3">
-          <h2 className="font-semibold text-lg">🔐 Authentification (JWT)</h2>
+          <h2 className="font-semibold text-lg">
+            🔐 Authentification (JWT)
+            {configured.jwtSecret && <BadgeConfigure />}
+          </h2>
           <input
             type="password"
             value={form.jwtSecret}
@@ -237,13 +320,15 @@ export default function ConfigurationPage() {
           </a>
         </div>
 
-        {/* ⭐ Mot de passe de configuration */}
+        {/* Mot de passe de configuration */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-3">
-          <h2 className="font-semibold text-lg">🔒 Mot de passe de configuration</h2>
+          <h2 className="font-semibold text-lg">
+            🔒 Mot de passe de configuration
+            {configured.configPassword && <BadgeConfigure />}
+          </h2>
           <p className="text-xs text-gray-500">
             Ce mot de passe est demandé avant d&apos;accéder à cette page (protection supplémentaire).
           </p>
-
           <div>
             <label className="block text-sm text-gray-600 mb-1">
               Nouveau mot de passe (laisser vide pour ne pas changer)
@@ -255,11 +340,7 @@ export default function ConfigurationPage() {
               placeholder="Laisser vide pour ne pas changer"
               className="w-full border border-gray-300 rounded px-3 py-2 font-mono text-xs"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Mot de passe actuel : <code>********</code> (masqué)
-            </p>
           </div>
-
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
             <p className="font-medium">⚠️ Important</p>
             <ul className="list-disc list-inside space-y-0.5">
@@ -271,14 +352,72 @@ export default function ConfigurationPage() {
           </div>
         </div>
 
-        {/* ⭐ Cron Secret */}
+        {/* Resend */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-3">
-          <h2 className="font-semibold text-lg">⏰ Tâches automatiques (Cron)</h2>
+          <h2 className="font-semibold text-lg">
+            📧 Envoi d&apos;emails (Resend)
+            {configured.resendApiKey && <BadgeConfigure />}
+          </h2>
+          <p className="text-xs text-gray-500">
+            Service utilisé pour envoyer les emplois du temps, absences et bulletins.{' '}
+            <a
+              href="https://resend.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              Créer un compte gratuit sur Resend →
+            </a>
+          </p>
+
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Clé API Resend</label>
+            <input
+              type="password"
+              value={form.resendApiKey}
+              onChange={(e) => update('resendApiKey', e.target.value)}
+              placeholder="re_xxxxxxxxxxxxxxxxxxxxx"
+              className="w-full border border-gray-300 rounded px-3 py-2 font-mono text-xs"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Laisser vide pour ne pas changer. Format : <code>re_...</code>
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Email expéditeur</label>
+            <input
+              value={form.emailFrom}
+              onChange={(e) => update('emailFrom', e.target.value)}
+              placeholder="ÉcoleApp <noreply@votre-domaine.com>"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              En dev : <code>onboarding@resend.dev</code> (envoi uniquement à votre propre email).
+              En prod : vérifiez votre domaine dans Resend.
+            </p>
+          </div>
+
+          <a
+            href="https://resend.com/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+          >
+            🔗 Documentation Resend →
+          </a>
+        </div>
+
+        {/* Cron Secret */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-3">
+          <h2 className="font-semibold text-lg">
+            ⏰ Tâches automatiques (Cron)
+            {configured.cronSecret && <BadgeConfigure />}
+          </h2>
           <p className="text-xs text-gray-500">
             Secret utilisé par Vercel Cron pour authentifier les tâches automatiques
             (ex: suppression des archives de plus de 10 ans).
           </p>
-
           <div>
             <label className="block text-sm text-gray-600 mb-1">Cron Secret</label>
             <input
@@ -289,7 +428,6 @@ export default function ConfigurationPage() {
               className="w-full border border-gray-300 rounded px-3 py-2 font-mono text-xs"
             />
           </div>
-
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -298,7 +436,7 @@ export default function ConfigurationPage() {
             >
               🎲 Générer un secret aléatoire
             </button>
-            {form.cronSecret && form.cronSecret !== '********' && (
+            {form.cronSecret && (
               <button
                 type="button"
                 onClick={() => {
@@ -311,20 +449,14 @@ export default function ConfigurationPage() {
               </button>
             )}
           </div>
-
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 space-y-1">
             <p className="font-medium">⚠️ Important</p>
             <ul className="list-disc list-inside space-y-0.5">
               <li>Générez un secret unique pour cette école</li>
-              <li>
-                Copiez-le et ajoutez-le dans{' '}
-                <strong>Vercel → Settings → Environment Variables</strong> sous le nom{' '}
-                <code>CRON_SECRET</code>
-              </li>
+              <li>Copiez-le et ajoutez-le dans <strong>Vercel → Settings → Environment Variables</strong> sous le nom <code>CRON_SECRET</code></li>
               <li>Redéployez pour que Vercel l&apos;injecte dans les crons</li>
             </ul>
           </div>
-
           <a
             href="https://vercel.com/docs/cron-jobs"
             target="_blank"

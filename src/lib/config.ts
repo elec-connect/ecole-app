@@ -9,6 +9,8 @@ export type AppConfig = {
   logoUrl?: string;
   cronSecret?: string;
   configPassword?: string;
+  resendApiKey?: string;
+  emailFrom?: string;
 };
 
 let cache: AppConfig | null = null;

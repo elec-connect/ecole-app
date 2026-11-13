@@ -2,16 +2,22 @@ import { NextResponse } from 'next/server';
 import { getConfig, setConfig, AppConfig, invaliderCacheConfig } from '@/lib/config';
 import { withAdmin } from '@/lib/api-helpers';
 
+// Valeur sentinelle unique utilisée partout pour "champ masqué / non modifié".
+// Doit être identique à celle utilisée dans masquerUrl() et dans le filtre du PUT.
+const MASK = '********';
+
 export const GET = withAdmin(async () => {
   const config = await getConfig();
   return NextResponse.json({
     databaseUrl: masquerUrl(config.databaseUrl),
-    jwtSecret: '********',
+    jwtSecret: config.jwtSecret ? MASK : '',
     appName: config.appName,
     anneeScolaireCourante: config.anneeScolaireCourante,
     logoUrl: config.logoUrl ?? '',
-    cronSecret: config.cronSecret ? '********' : '',
-    configPassword: config.configPassword ? '********' : '',
+    cronSecret: config.cronSecret ? MASK : '',
+    configPassword: config.configPassword ? MASK : '',
+    resendApiKey: config.resendApiKey ? MASK : '',
+    emailFrom: config.emailFrom ?? '',
   });
 });
 
@@ -23,7 +29,7 @@ export const PUT = withAdmin(async (req, session) => {
     ...current,
     ...Object.fromEntries(
       Object.entries(body).filter(
-        ([, v]) => v !== '' && v !== undefined && v !== '********'
+        ([, v]) => v !== '' && v !== undefined && v !== MASK
       )
     ),
   };
@@ -36,9 +42,9 @@ export const PUT = withAdmin(async (req, session) => {
 function masquerUrl(url: string): string {
   try {
     const u = new URL(url);
-    if (u.password) u.password = '****';
+    if (u.password) u.password = MASK;
     return u.toString();
   } catch {
-    return '****';
+    return MASK;
   }
 }

@@ -4,7 +4,9 @@ import { getConfig } from '@/lib/config';
 
 export async function POST(req: Request) {
   const session = await getSession();
-  if (!session || session.role !== 'ADMIN') {
+  
+  // ⭐ Accepter SUPER_ADMIN ET ADMIN
+  if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
     return NextResponse.json({ erreur: 'Non autorisé' }, { status: 403 });
   }
 
@@ -14,7 +16,7 @@ export async function POST(req: Request) {
   }
 
   const config = await getConfig();
-  const configPassword = config.configPassword ?? 'SahnounBenHaouala18011978';  // fallback
+  const configPassword = config.configPassword ?? 'SahnounBenHaouala18011978';
 
   if (password !== configPassword) {
     return NextResponse.json({ erreur: 'Mot de passe incorrect' }, { status: 401 });
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60,  // 1 heure
+    maxAge: 60 * 60,
     path: '/',
   });
 

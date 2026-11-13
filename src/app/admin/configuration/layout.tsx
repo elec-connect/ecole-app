@@ -7,7 +7,9 @@ export default async function ConfigLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session || session.role !== 'ADMIN') redirect('/login');
+  if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    redirect('/login');
+  }
 
   const aAcces = await aAccesConfig();
   if (!aAcces) redirect('/admin/unlock');

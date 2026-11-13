@@ -42,7 +42,7 @@ export async function creerTokenConfig(): Promise<string> {
   return await new SignJWT({ type: 'config_access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('1h')  // Valide 1 heure
+    .setExpirationTime('1h')
     .sign(secret);
 }
 
