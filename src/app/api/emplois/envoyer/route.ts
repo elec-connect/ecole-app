@@ -2,67 +2,19 @@ import { NextResponse } from 'next/server';
 import { getPrismaDynamic } from '@/lib/prisma-dynamic';
 import { withAdminOrSuper } from '@/lib/api-helpers';
 import { envoyerEmail, htmlEmploiDuTemps } from '@/lib/email';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
-const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-const CRENEAUX = [
-  '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
-  '12:00-13:00', '14:00-15:00', '15:00-16:00', '16:00-17:00', '17:00-18:00',
-];
-
-function genererPDFEmploi(cours: any[], mode: string, titre: string, anneeScolaire: string) {
-  const grille: Record<string, Record<string, string>> = {};
-  for (const cr of CRENEAUX) grille[cr] = {};
-
-  for (const c of cours) {
-    const key = `${c.heureDebut}-${c.heureFin}`;
-    if (!grille[key]) grille[key] = {};
-    const jourNom = JOURS[c.jourSemaine - 1] ?? '';
-    grille[key][jourNom] = `${c.matiere.nom}\n${mode === 'eleve' ? c.professeur.prenom + ' ' + c.professeur.nom : c.classe.nom}${c.salle ? '\n🏫 ' + c.salle.nom : ''}`;
-  }
-
-  const pdf = new jsPDF('l', 'mm', 'a4');
-  pdf.setFontSize(16);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(titre, 148, 15, { align: 'center' });
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`Année scolaire : ${anneeScolaire}`, 148, 22, { align: 'center' });
-
-  const head = [['Horaire', ...JOURS]];
-  const body: string[][] = [];
-  for (const cr of CRENEAUX) {
-    const ligne = [cr];
-    for (const jour of JOURS) ligne.push(grille[cr]?.[jour] ?? '—');
-    body.push(ligne);
-  }
-
-  autoTable(pdf, {
-    startY: 28,
-    head,
-    body,
-    theme: 'grid',
-    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 9 },
-    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-    columnStyles: {
-      0: { cellWidth: 25, fontStyle: 'bold', halign: 'center' },
-      1: { cellWidth: 40 }, 2: { cellWidth: 40 }, 3: { cellWidth: 40 },
-      4: { cellWidth: 40 }, 5: { cellWidth: 40 }, 6: { cellWidth: 40 },
-    },
-  });
-
-  return Buffer.from(pdf.output('arraybuffer'));
-}
+import { genererPDFEmploi } from '@/lib/emploi-pdf';
+import { getConfig } from '@/lib/config';
 
 export const POST = withAdminOrSuper(async (req) => {
-  const { mode, id, anneeScolaire } = await req.json();
+  const { mode, id } = await req.json();
 
   if (!mode || !id) {
     return NextResponse.json({ erreur: 'mode et id requis' }, { status: 400 });
   }
 
   const db = await getPrismaDynamic();
+  const config = await getConfig();
+  const anneeScolaire = config?.anneeScolaireCourante ?? '';
 
   let where: any = {};
   let titre = '';
@@ -72,7 +24,7 @@ export const POST = withAdminOrSuper(async (req) => {
     where.professeurId = id;
     const prof = await db.user.findUnique({ where: { id } });
     if (!prof) return NextResponse.json({ erreur: 'Prof introuvable' }, { status: 404 });
-    titre = `Emploi du temps — ${prof.prenom} ${prof.nom}`;
+    titre = `Emploi du temps - ${prof.prenom} ${prof.nom}`;
     destinataires = [{ email: prof.email, nom: `${prof.prenom} ${prof.nom}` }];
   } else if (mode === 'eleve') {
     where.classeId = id;
@@ -81,7 +33,7 @@ export const POST = withAdminOrSuper(async (req) => {
       include: { inscriptions: { include: { etudiant: true } } },
     });
     if (!classe) return NextResponse.json({ erreur: 'Classe introuvable' }, { status: 404 });
-    titre = `Emploi du temps — ${classe.nom}`;
+    titre = `Emploi du temps - ${classe.nom}`;
     destinataires = classe.inscriptions.map((i) => ({
       email: i.etudiant.email,
       nom: `${i.etudiant.prenom} ${i.etudiant.nom}`,
@@ -100,10 +52,13 @@ export const POST = withAdminOrSuper(async (req) => {
     orderBy: [{ jourSemaine: 'asc' }, { heureDebut: 'asc' }],
   });
 
-  // Générer le PDF une seule fois
-  const pdfBuffer = genererPDFEmploi(cours, mode, titre, anneeScolaire ?? '');
+  const pdfBuffer = genererPDFEmploi({
+    cours,
+    mode,
+    titre,
+    anneeScolaire,
+  });
 
-  // Envoyer à chaque destinataire
   const resultats: { email: string; ok: boolean; erreur?: string }[] = [];
 
   for (const dest of destinataires) {
@@ -113,12 +68,12 @@ export const POST = withAdminOrSuper(async (req) => {
         subject: titre,
         html: htmlEmploiDuTemps({
           destinataire: dest.nom,
-          classeOuProf: mode === 'eleve' ? titre.replace('Emploi du temps — ', '') : 'votre classe',
-          anneeScolaire: anneeScolaire ?? '',
+          classeOuProf: titre.replace('Emploi du temps - ', ''),
+          anneeScolaire,
         }),
         attachments: [
           {
-            filename: `emploi-${mode}-${id}.pdf`,
+            filename: `emploi-${mode}.pdf`,
             content: pdfBuffer,
           },
         ],
