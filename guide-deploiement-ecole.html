@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Guide de déploiement — ÉcoleApp</title>
+  <title>Guide de déploiement complet — ÉcoleApp</title>
   <style>
     :root {
       --primary: #1e40af;
@@ -17,6 +17,7 @@
       --gray-600: #4b5563;
       --gray-900: #111827;
       --purple: #7c3aed;
+      --resend: #ec4899;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -166,6 +167,7 @@
     .alert-info { background: #dbeafe; border-left: 4px solid var(--primary); color: #1e3a8a; }
     .alert-danger { background: #fee2e2; border-left: 4px solid var(--danger); color: #7f1d1d; }
     .alert-purple { background: #ede9fe; border-left: 4px solid var(--purple); color: #4c1d95; }
+    .alert-resend { background: #fce7f3; border-left: 4px solid var(--resend); color: #831843; }
 
     .info-box {
       background: #f8fafc;
@@ -261,6 +263,25 @@
       margin-top: 3rem;
     }
 
+    .section-title {
+      margin: 4rem 0 1rem;
+      color: var(--primary);
+      border-top: 3px solid var(--primary);
+      padding-top: 2rem;
+      font-size: 1.8rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+    .badge-option { background: #fef3c7; color: #92400e; }
+    .badge-required { background: #fee2e2; color: #7f1d1d; }
+
     @media (max-width: 640px) {
       header h1 { font-size: 1.8rem; }
       .step-content { margin-left: 0; margin-top: 1rem; }
@@ -274,9 +295,11 @@
   <div class="progress-bar" id="progressBar"></div>
 
   <header>
-    <h1>🎓 Guide de déploiement — ÉcoleApp</h1>
+    <h1>🎓 Guide de déploiement complet — ÉcoleApp</h1>
     <p>Déployer un nouveau client à partir d'une copie de <code>ecole-app</code></p>
-    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">Dupliquer → Configurer → Déployer sur Vercel + Neon</p>
+    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">
+      Dupliquer → Configurer → Neon → Déployer → Domaine → Resend
+    </p>
   </header>
 
   <div class="container">
@@ -295,6 +318,11 @@
         <a href="https://vercel.com/dashboard" target="_blank">Ouvrir Vercel →</a>
       </div>
       <div class="service-card">
+        <h3>📧 Resend</h3>
+        <p>Service d'envoi d'emails (emplois du temps, absences, bulletins).</p>
+        <a href="https://resend.com" target="_blank">Ouvrir Resend →</a>
+      </div>
+      <div class="service-card">
         <h3>💻 Vercel CLI</h3>
         <p>Outil en ligne de commande pour déployer sans GitHub.</p>
         <a href="https://vercel.com/docs/cli" target="_blank">Documentation CLI →</a>
@@ -305,21 +333,21 @@
         <a href="https://vercel.com/docs/cron-jobs" target="_blank">Documentation Cron →</a>
       </div>
       <div class="service-card">
-        <h3>🔐 JWT.io</h3>
-        <p>Comprendre les JSON Web Tokens utilisés pour l'authentification.</p>
-        <a href="https://jwt.io/introduction" target="_blank">En savoir plus →</a>
+        <h3>🌐 Zone DNS OVH</h3>
+        <p>Héberge les enregistrements DNS du domaine (A, CNAME, TXT, MX).</p>
+        <a href="https://www.ovh.com/manager/" target="_blank">Ouvrir OVH →</a>
       </div>
     </div>
 
     <!-- Concept -->
     <div class="alert alert-info">
-      💡 <strong>Principe</strong> : vous avez un projet de référence <code>ecole-app</code> qui fonctionne. Pour chaque nouveau client, vous en faites une <strong>copie</strong>, vous configurez une nouvelle base Neon et un nouveau projet Vercel, puis vous déployez.
+      💡 <strong>Principe</strong> : vous avez un projet de référence <code>ecole-app</code> qui fonctionne. Pour chaque nouveau client, vous en faites une <strong>copie</strong>, vous configurez une nouvelle base Neon et un nouveau projet Vercel, puis vous déployez. Ensuite, vous reliez un domaine personnalisé et configurez Resend pour les emails.
     </div>
 
     <!-- ============================================================ -->
-    <!-- PROCÉDURE PRINCIPALE -->
+    <!-- PARTIE 1 : PROCÉDURE PRINCIPALE -->
     <!-- ============================================================ -->
-    <h2 style="margin: 2rem 0 1rem; color: var(--primary);">🚀 Procédure complète pour un nouveau client</h2>
+    <h2 style="margin: 2rem 0 1rem; color: var(--primary);">🚀 Partie 1 — Procédure complète pour un nouveau client</h2>
 
     <!-- Étape 1 : Copier le dossier -->
     <div class="step" data-step="1">
@@ -376,7 +404,7 @@ Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue<button class="
         <pre><code>npm install<button class="copy-btn" onclick="copyCode(this)">Copier</button></code></pre>
         <p><strong>Cette commande va :</strong></p>
         <ul style="margin-left: 1.5rem; color: var(--gray-600);">
-          <li>Installer toutes les dépendances (<code>next</code>, <code>react</code>, <code>prisma</code>, <code>bcryptjs</code>, <code>jose</code>, <code>jspdf</code>, <code>tailwindcss</code>...)</li>
+          <li>Installer toutes les dépendances (<code>next</code>, <code>react</code>, <code>prisma</code>, <code>bcryptjs</code>, <code>jose</code>, <code>jspdf</code>, <code>tailwindcss</code>, <code>resend</code>...)</li>
           <li>Exécuter <code>postinstall</code> → <code>prisma generate</code></li>
           <li>Prendre ~2-3 minutes</li>
         </ul>
@@ -496,7 +524,7 @@ All migrations have been successfully applied.</code></pre>
     <div class="step" data-step="9">
       <div class="step-header">
         <div class="step-number">9</div>
-        <h2>(Optionnel) Seed de données de test</h2>
+        <h2>(Optionnel) Seed de données de test <span class="badge badge-option">OPTIONNEL</span></h2>
         <input type="checkbox" class="step-checkbox" data-step="9">
       </div>
       <div class="step-content">
@@ -725,12 +753,9 @@ vercel deploy --prod</code></pre>
     </table>
 
     <!-- ============================================================ -->
-    <!-- NOUVELLE SECTION : DOMAINE & DÉPLOIEMENT SANS GITHUB -->
+    <!-- PARTIE 2 : DOMAINE PERSONNALISÉ & DÉPLOIEMENT SANS GITHUB -->
     <!-- ============================================================ -->
-
-    <h2 style="margin: 4rem 0 1rem; color: var(--primary); border-top: 3px solid var(--primary); padding-top: 2rem;">
-      🌐 Domaine personnalisé & Déploiement sans GitHub
-    </h2>
+    <h2 class="section-title">🌐 Partie 2 — Domaine personnalisé & Déploiement sans GitHub</h2>
 
     <div class="alert alert-info">
       💡 Vous pouvez utiliser votre <strong>propre domaine</strong> (ex: <code>ecole-client-b.tn</code>) et déployer <strong>directement sur Vercel sans passer par GitHub</strong>. Voici la procédure complète.
@@ -893,9 +918,225 @@ vercel env add CRON_SECRET production --value "VOTRE_CRON_SECRET" --sensitive --
       </table>
     </div>
 
-    <!-- Checklist finale -->
+    <!-- ============================================================ -->
+    <!-- PARTIE 3 : CONFIGURATION RESEND + DOMAINE OVH -->
+    <!-- ============================================================ -->
+    <h2 class="section-title">📧 Partie 3 — Configuration Resend + Domaine OVH</h2>
+
+    <div class="alert alert-resend">
+      💡 Resend permet d'envoyer les <strong>emplois du temps</strong>, <strong>absences</strong> et <strong>bulletins</strong> aux élèves et parents. Sans un <strong>domaine vérifié</strong>, Resend n'envoie qu'à votre propre adresse email.
+    </div>
+
+    <!-- Étape A : Créer compte Resend -->
+    <div class="step" data-step="resend-1" style="border-left-color: var(--resend);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--resend);">A</div>
+        <h2>Créer un compte Resend</h2>
+        <input type="checkbox" class="step-checkbox" data-step="resend-1">
+      </div>
+      <div class="step-content">
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Allez sur <a href="https://resend.com" target="_blank">resend.com</a></li>
+          <li>Cliquez sur <strong>Sign Up</strong> (gratuit jusqu'à 3000 emails/mois)</li>
+          <li>Connectez-vous avec GitHub ou email</li>
+        </ol>
+        <div class="alert alert-success">
+          ✅ Plan gratuit suffisant pour un établissement scolaire.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape B : Ajouter le domaine -->
+    <div class="step" data-step="resend-2" style="border-left-color: var(--resend);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--resend);">B</div>
+        <h2>Ajouter votre domaine dans Resend</h2>
+        <input type="checkbox" class="step-checkbox" data-step="resend-2">
+      </div>
+      <div class="step-content">
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Dans Resend → <strong>Domains → Add Domain</strong></li>
+          <li>Tapez <code>smart-haouala.tn</code> (ou votre domaine)</li>
+          <li>Choisissez la région <strong>EU (Europe)</strong></li>
+          <li>Cliquez sur <strong>Add</strong></li>
+        </ol>
+        <p>Resend vous affichera <strong>4 enregistrements DNS</strong> à configurer chez OVH :
+          <strong>1 DKIM (TXT)</strong>, <strong>2 SPF (CNAME)</strong>, <strong>1 DMARC (TXT)</strong>.
+        </p>
+        <div class="alert alert-warning">
+          ⚠️ Copiez les valeurs <strong>exactement</strong> comme Resend les affiche. Une erreur d'un seul caractère bloquera la vérification.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape C : Configurer la Zone DNS OVH -->
+    <div class="step" data-step="resend-3" style="border-left-color: var(--warning);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--warning);">C</div>
+        <h2>Configurer la Zone DNS chez OVH</h2>
+        <input type="checkbox" class="step-checkbox" data-step="resend-3">
+      </div>
+      <div class="step-content">
+        <p>Allez dans <strong>OVH → Web Cloud → Domaines → smart-haouala.tn → Zone DNS</strong>.</p>
+        <p>Cliquez sur <strong>"Ajouter une entrée"</strong> pour chaque ligne :</p>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">C.1 — Enregistrement DKIM (TXT)</h3>
+        <pre><code>Type         : TXT
+Sous-domaine : resend._domainkey
+Cible        : p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCjf4Wk...
+TTL          : Par défaut</code></pre>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">C.2 — Enregistrement SPF n°1 (CNAME)</h3>
+        <pre><code>Type         : CNAME
+Sous-domaine : rsend
+Cible        : rsend-euw1.forge.rmta.net.
+TTL          : Par défaut</code></pre>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">C.3 — Enregistrement SPF n°2 (CNAME)</h3>
+        <pre><code>Type         : CNAME
+Sous-domaine : send
+Cible        : send.forge.rmta.net.
+TTL          : Par défaut</code></pre>
+
+        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--primary);">C.4 — Enregistrement DMARC (TXT)</h3>
+        <pre><code>Type         : TXT
+Sous-domaine : _dmarc
+Cible        : v=DMARC1; p=none;
+TTL          : Par défaut</code></pre>
+
+        <div class="alert alert-danger">
+          ⚠️ <strong>NE TOUCHEZ PAS</strong> aux enregistrements <code>MX</code> existants (pour vos emails OVH). Resend ne demande que des TXT et CNAME, aucun conflit.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape D : Vérifier le domaine -->
+    <div class="step" data-step="resend-4" style="border-left-color: var(--purple);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--purple);">D</div>
+        <h2>Vérifier le domaine dans Resend</h2>
+        <input type="checkbox" class="step-checkbox" data-step="resend-4">
+      </div>
+      <div class="step-content">
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Retournez sur Resend → <strong>Domains</strong></li>
+          <li>Cliquez sur <strong>"Verify DNS Records"</strong></li>
+          <li>Attendez que tous les enregistrements passent à <strong>"Verified"</strong> (de quelques minutes à 24h)</li>
+        </ol>
+        <div class="alert alert-success">
+          ✅ Une fois tous vérifiés, votre domaine peut envoyer des emails à n'importe qui.
+        </div>
+        <div class="alert alert-info">
+          💡 Si après 24h un enregistrement reste en erreur, vérifiez qu'il n'y a pas de doublon dans la Zone DNS OVH (même sous-domaine en double).
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape E : Créer une clé API -->
+    <div class="step" data-step="resend-5" style="border-left-color: var(--primary);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--primary);">E</div>
+        <h2>Créer une clé API Resend</h2>
+        <input type="checkbox" class="step-checkbox" data-step="resend-5">
+      </div>
+      <div class="step-content">
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Dans Resend → <strong>API Keys → Create API Key</strong></li>
+          <li><strong>Name</strong> : <code>ecole-app-prod</code></li>
+          <li><strong>Permission</strong> : <strong>Full access</strong></li>
+          <li><strong>Domain</strong> : <code>smart-haouala.tn</code></li>
+          <li>Cliquez sur <strong>Create</strong></li>
+          <li><strong>⚠️ COPIEZ IMMÉDIATEMENT la clé complète</strong> (<code>re_...</code>, ~40 caractères). Elle ne sera plus affichée.</li>
+        </ol>
+        <div class="alert alert-warning">
+          ⚠️ Changer la clé API <strong>ne modifie pas</strong> les DNS. Ce sont deux choses indépendantes.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape F : Configurer dans l'app -->
+    <div class="step" data-step="resend-6" style="border-left-color: var(--primary);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--primary);">F</div>
+        <h2>Configurer dans /admin/configuration</h2>
+        <input type="checkbox" class="step-checkbox" data-step="resend-6">
+      </div>
+      <div class="step-content">
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Connectez-vous en <strong>SUPER_ADMIN</strong></li>
+          <li>Allez sur <code>/admin/configuration</code> → débloquez avec <code>SahnounBenHaouala18011978</code></li>
+          <li>Section <strong>📧 Envoi d'emails (Resend)</strong></li>
+          <li><strong>Clé API Resend</strong> : collez la clé complète <code>re_...</code></li>
+          <li><strong>Email expéditeur</strong> : <code>ÉcoleApp &lt;noreply@smart-haouala.tn&gt;</code></li>
+          <li><strong>Enregistrer la configuration</strong></li>
+        </ol>
+        <div class="alert alert-success">
+          ✅ À partir de maintenant, vous pouvez envoyer des emails à n'importe quel élève ou parent.
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape G : Tester -->
+    <div class="step" data-step="resend-7" style="border-left-color: var(--purple);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--purple);">G</div>
+        <h2>Tester l'envoi</h2>
+        <input type="checkbox" class="step-checkbox" data-step="resend-7">
+      </div>
+      <div class="step-content">
+        <ol style="margin-left: 1.5rem; color: var(--gray-600);">
+          <li>Allez sur <code>/admin/emplois</code></li>
+          <li>Onglet <strong>Élève</strong> → sélectionnez une classe</li>
+          <li>Cliquez sur <strong>📧 Envoyer par email</strong></li>
+          <li>Vérifiez que les élèves reçoivent l'email avec le PDF en pièce jointe</li>
+        </ol>
+        <div class="alert alert-info">
+          💡 En développement, Resend n'envoie qu'à votre propre email. En production (domaine vérifié), il envoie à tous.
+        </div>
+        <div class="alert alert-danger">
+          ⚠️ Ne jamais committer la clé API Resend dans Git. Elle est stockée chiffrée en base, pas dans <code>.env</code>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Résumé visuel Resend -->
+    <div class="info-box">
+      <h4>📊 Résumé : les 3 étapes de la config Resend</h4>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Étape</th>
+            <th>Où</th>
+            <th>Ce qu'on fait</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>A → D</strong></td>
+            <td>OVH + Resend</td>
+            <td>Ajouter et vérifier les 4 enregistrements DNS</td>
+          </tr>
+          <tr>
+            <td><strong>E</strong></td>
+            <td>Resend</td>
+            <td>Créer une clé API <code>re_...</code></td>
+          </tr>
+          <tr>
+            <td><strong>F</strong></td>
+            <td>/admin/configuration</td>
+            <td>Coller la clé + email expéditeur</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- CHECKLIST FINALE UNIFIÉE -->
+    <!-- ============================================================ -->
     <div class="checklist">
-      <h2>✅ Checklist finale</h2>
+      <h2>✅ Checklist finale complète</h2>
+
+      <h3 style="margin: 1.5rem 0 0.5rem; color: var(--primary); font-size: 1.1rem;">📦 Partie 1 — Déploiement de base</h3>
       <div class="checklist-item">
         <input type="checkbox" id="c1">
         <label for="c1">Dossier copié (sans node_modules, .next, .git)</label>
@@ -952,6 +1193,8 @@ vercel env add CRON_SECRET production --value "VOTRE_CRON_SECRET" --sensitive --
         <input type="checkbox" id="c14">
         <label for="c14">Logo, nom et classes configurés dans l'application</label>
       </div>
+
+      <h3 style="margin: 1.5rem 0 0.5rem; color: var(--primary); font-size: 1.1rem;">🌐 Partie 2 — Domaine personnalisé</h3>
       <div class="checklist-item">
         <input type="checkbox" id="c15">
         <label for="c15">Domaine personnalisé configuré (Zone DNS OVH + Vercel)</label>
@@ -960,12 +1203,38 @@ vercel env add CRON_SECRET production --value "VOTRE_CRON_SECRET" --sensitive --
         <input type="checkbox" id="c16">
         <label for="c16"><code>NEXT_PUBLIC_APP_URL</code> mis à jour avec le domaine final</label>
       </div>
+
+      <h3 style="margin: 1.5rem 0 0.5rem; color: var(--primary); font-size: 1.1rem;">📧 Partie 3 — Resend + OVH</h3>
+      <div class="checklist-item">
+        <input type="checkbox" id="c17">
+        <label for="c17">Compte Resend créé et domaine ajouté</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c18">
+        <label for="c18">4 enregistrements DNS Resend (DKIM, SPF x2, DMARC) configurés chez OVH</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c19">
+        <label for="c19">Domaine marqué <strong>"Verified"</strong> dans Resend</label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c20">
+        <label for="c20">Clé API Resend <code>re_...</code> collée dans <code>/admin/configuration</code></label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c21">
+        <label for="c21">Email expéditeur configuré avec <code>noreply@smart-haouala.tn</code></label>
+      </div>
+      <div class="checklist-item">
+        <input type="checkbox" id="c22">
+        <label for="c22">Test d'envoi d'emploi du temps réussi</label>
+      </div>
     </div>
 
   </div>
 
   <footer>
-    ÉcoleApp — Guide de déploiement multi-clients · Fait avec ❤️
+    ÉcoleApp — Guide de déploiement complet · Fait avec ❤️
   </footer>
 
   <script>
@@ -975,7 +1244,7 @@ vercel env add CRON_SECRET production --value "VOTRE_CRON_SECRET" --sensitive --
     function updateProgress() {
       const total = checkboxes.length;
       const checked = Array.from(checkboxes).filter(c => c.checked).length;
-      const percent = (checked / total) * 100;
+      const percent = (total > 0) ? (checked / total) * 100 : 0;
       progressBar.style.width = percent + '%';
 
       checkboxes.forEach(cb => {

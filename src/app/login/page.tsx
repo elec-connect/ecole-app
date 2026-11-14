@@ -1,7 +1,91 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+};
+
+function InstallerEncart() {
+  const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setPromptEvent(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setInstalled(true);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  async function installer() {
+    if (!promptEvent) return;
+    await promptEvent.prompt();
+    const choice = await promptEvent.userChoice;
+    if (choice.outcome === 'accepted') setInstalled(true);
+    setPromptEvent(null);
+  }
+
+  if (installed) return null;
+
+  return (
+    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900">
+      <p className="font-semibold mb-2 flex items-center gap-2">
+        📲 Installer ÉcoleApp sur votre bureau
+      </p>
+
+      {promptEvent ? (
+        <>
+          <p className="text-blue-800 mb-2">
+            Installez ÉcoleApp comme une application pour un accès plus rapide.
+          </p>
+          <button
+            type="button"
+            onClick={installer}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+          >
+            ⊕ Installer maintenant
+          </button>
+        </>
+      ) : (
+        <ol className="list-decimal list-inside space-y-1 text-blue-800">
+          <li>
+            Ouvrez{' '}
+            <a
+              href="https://www.smart-haouala.tn"
+              className="underline font-medium"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              https://www.smart-haouala.tn
+            </a>{' '}
+            dans Chrome ou Edge
+          </li>
+          <li>
+            Cliquez sur l&apos;icône <strong>⊕ Installer</strong> à droite de la barre d&apos;adresse
+          </li>
+          <li>ÉcoleApp s&apos;installe comme une application, avec une icône sur votre bureau</li>
+        </ol>
+      )}
+
+      <p className="mt-2 text-xs text-blue-700">
+        Ou téléchargez le{' '}
+        <a href="/EcoleApp.url" className="underline font-medium" download>
+          raccourci bureau
+        </a>{' '}
+        et double-cliquez dessus.
+      </p>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,55 +124,57 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form
-        onSubmit={onSubmit}
-        className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md space-y-4"
-      >
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">🎓 ÉcoleApp</h1>
-          <p className="text-sm text-gray-500 mt-1">Connectez-vous à votre espace</p>
-        </div>
-
-        {erreur && (
-          <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg border border-red-200">
-            {erreur}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            placeholder="admin@ecole.tn"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
-          <input
-            type="password"
-            value={motDePasse}
-            onChange={(e) => setMotDePasse(e.target.value)}
-            required
-            placeholder="••••••••"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+      <div className="w-full max-w-md">
+        <form
+          onSubmit={onSubmit}
+          className="bg-white p-8 rounded-2xl shadow-md space-y-4"
         >
-          {loading ? 'Connexion...' : 'Se connecter'}
-        </button>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900">🎓 ÉcoleApp</h1>
+            <p className="text-sm text-gray-500 mt-1">Connectez-vous à votre espace</p>
+          </div>
 
-        
-      </form>
+          {erreur && (
+            <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg border border-red-200">
+              {erreur}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="admin@ecole.tn"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+            <input
+              type="password"
+              value={motDePasse}
+              onChange={(e) => setMotDePasse(e.target.value)}
+              required
+              placeholder="••••••••"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+          >
+            {loading ? 'Connexion...' : 'Se connecter'}
+          </button>
+        </form>
+
+        <InstallerEncart />
+      </div>
     </div>
   );
 }
