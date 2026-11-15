@@ -21,8 +21,11 @@ const ITEMS_BASE = [
   { href: '/admin/demandes-inscription', label: 'Demandes d\'inscription', icon: '📝' },
 ];
 
-// Lien réservé au SUPER_ADMIN
-const ITEM_CONFIG = { href: '/admin/configuration', label: 'Configuration', icon: '⚙️' };
+// Liens réservés au SUPER_ADMIN
+const ITEMS_SUPER_ADMIN = [
+  { href: '/admin/configuration', label: 'Configuration', icon: '⚙️' },
+  { href: '/admin/reinitialisation', label: 'Réinitialiser l\'année', icon: '⚠️' },
+];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -36,9 +39,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const user = await db.user.findUnique({ where: { id: session.id } });
   const config = await getConfig();
 
-  // ⭐ Configuration visible uniquement par le SUPER_ADMIN
+  // ⭐ Les liens SUPER_ADMIN ne sont visibles que par le SUPER_ADMIN
   const items =
-    session.role === 'SUPER_ADMIN' ? [...ITEMS_BASE, ITEM_CONFIG] : ITEMS_BASE;
+    session.role === 'SUPER_ADMIN'
+      ? [...ITEMS_BASE, ...ITEMS_SUPER_ADMIN]
+      : ITEMS_BASE;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
