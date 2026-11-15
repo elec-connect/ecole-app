@@ -34,6 +34,27 @@ enum StatutDemande {
   REJETEE
 }
 
+enum StatutPaiement {
+  PAYE
+  IMPAYE
+  PARTIEL
+}
+
+enum MoisScolaire {
+  SEPTEMBRE
+  OCTOBRE
+  NOVEMBRE
+  DECEMBRE
+  JANVIER
+  FEVRIER
+  MARS
+  AVRIL
+  MAI
+  JUIN
+  JUILLET
+  AOUT
+}
+
 model Configuration {
   id          String   @id @default("singleton")
   donnees     String
@@ -63,9 +84,10 @@ model User {
   enfants        ParentEleve[] @relation("Parent")
   parents        ParentEleve[] @relation("Eleve")
 
-  // ⭐ Nouvelles relations
+  // Relations supplémentaires
   demandesInscription DemandeInscription[] @relation("DemandeInscriptionEtudiant")
   notifications       Notification[]       @relation("NotificationDestinataire")
+  fraisScolarite      FraisScolarite[]     @relation("FraisEleve")
 }
 
 model ParentEleve {
@@ -247,7 +269,7 @@ model Archive {
   createdById String?
 }
 
-// ⭐ NOUVEAU : Demandes de pré-inscription (formulaire public)
+// Demandes de pré-inscription (formulaire public)
 model DemandeInscription {
   id               String        @id @default(cuid())
   nom              String
@@ -264,7 +286,7 @@ model DemandeInscription {
   etudiant         User?         @relation("DemandeInscriptionEtudiant", fields: [etudiantId], references: [id])
 }
 
-// ⭐ NOUVEAU : Notifications admin (cloche + badge)
+// Notifications admin (cloche + badge)
 model Notification {
   id             String   @id @default(cuid())
   type           String   // ex: "INSCRIPTION", "SYSTEME"
@@ -276,4 +298,36 @@ model Notification {
   createdAt      DateTime @default(now())
 
   @@index([destinataireId, lu])
+}
+
+// Comptabilité : frais mensuels par élève
+model FraisScolarite {
+  id             String   @id @default(cuid())
+  eleveId        String
+  anneeScolaire  String
+  montantMensuel Float
+  description    String?
+  createdAt      DateTime @default(now())
+
+  eleve     User       @relation("FraisEleve", fields: [eleveId], references: [id], onDelete: Cascade)
+  paiements Paiement[]
+
+  @@unique([eleveId, anneeScolaire])
+}
+
+// Comptabilité : paiements mensuels
+model Paiement {
+  id           String         @id @default(cuid())
+  fraisId      String
+  mois         MoisScolaire
+  montant      Float
+  datePaiement DateTime       @default(now())
+  methode      String?
+  reference    String?
+  statut       StatutPaiement @default(PAYE)
+  createdAt    DateTime       @default(now())
+
+  frais FraisScolarite @relation(fields: [fraisId], references: [id], onDelete: Cascade)
+
+  @@unique([fraisId, mois])
 }

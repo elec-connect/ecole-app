@@ -19,6 +19,7 @@ const ITEMS_BASE = [
   { href: '/admin/moyennes', label: 'Moyennes', icon: '📈' },
   { href: '/admin/archives', label: 'Archives', icon: '📦' },
   { href: '/admin/demandes-inscription', label: 'Demandes d\'inscription', icon: '📝' },
+  { href: '/admin/comptabilite', label: 'Comptabilité', icon: '💰' },
 ];
 
 // Liens réservés au SUPER_ADMIN

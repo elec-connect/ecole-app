@@ -53,15 +53,39 @@ export async function reinitialiserAnneeScolaire() {
         select: { id: true, nom: true, prenom: true, email: true },
       });
 
+      // ⭐ Comptabilité : frais et paiements de l'année
+      const fraisScolarite = await tx.fraisScolarite.findMany({
+        where: { anneeScolaire: anneeActuelle },
+        include: {
+          eleve: { select: { id: true, nom: true, prenom: true, email: true } },
+          paiements: {
+            orderBy: { datePaiement: 'asc' },
+          },
+        },
+      });
+
       // Calcul des statistiques
       const nbEleves = classes.reduce((acc, c) => acc + c.inscriptions.length, 0);
       const nbCours = classes.reduce((acc, c) => acc + c.cours.length, 0);
 
-      // Compter les notes pour l'année (via les cours de cette année)
       const coursIds = classes.flatMap((c) => c.cours.map((co) => co.id));
       const nbNotes = await tx.note.count({
         where: { evaluation: { coursId: { in: coursIds } } },
       });
+
+      // ⭐ Statistiques comptables
+      const totalAttenduComptabilite = fraisScolarite.reduce(
+        (sum, f) => sum + f.montantMensuel * 12,
+        0
+      );
+      const totalEncaisse = fraisScolarite.reduce(
+        (sum, f) => sum + f.paiements.reduce((s, p) => s + p.montant, 0),
+        0
+      );
+      const nbPaiements = fraisScolarite.reduce(
+        (sum, f) => sum + f.paiements.length,
+        0
+      );
 
       // ============================
       // B. CRÉER L'ARCHIVE
@@ -77,11 +101,16 @@ export async function reinitialiserAnneeScolaire() {
             anneeScolaire: anneeActuelle,
             classes,
             professeurs,
+            fraisScolarite, // ⭐ comptabilité incluse
             statistiques: {
               nbClasses: classes.length,
               nbEleves,
               nbCours,
               nbNotes,
+              nbPaiements,
+              totalAttenduComptabilite,
+              totalEncaisse,
+              resteAPayer: totalAttenduComptabilite - totalEncaisse,
             },
           }),
           nbEleves,
@@ -95,7 +124,7 @@ export async function reinitialiserAnneeScolaire() {
       // C. SUPPRIMER DANS LE BON ORDRE
       // ============================
 
-      // C.1 Notes (liées aux évaluations, qui sont liées aux cours)
+      // C.1 Notes (liées aux évaluations → cours)
       await tx.note.deleteMany({
         where: { evaluation: { coursId: { in: coursIds } } },
       });
@@ -130,13 +159,20 @@ export async function reinitialiserAnneeScolaire() {
         where: { anneeScolaire: anneeActuelle },
       });
 
-      // C.8 Classes
+      // ⭐ C.8 Comptabilité : paiements puis frais
+      await tx.paiement.deleteMany({
+        where: { frais: { anneeScolaire: anneeActuelle } },
+      });
+      await tx.fraisScolarite.deleteMany({
+        where: { anneeScolaire: anneeActuelle },
+      });
+
+      // C.9 Classes
       await tx.classe.deleteMany({
         where: { anneeScolaire: anneeActuelle },
       });
 
-      // C.9 Désactiver les professeurs (au lieu de les supprimer,
-      //     pour préserver l'historique des messages/relations)
+      // C.10 Désactiver les professeurs (préserver historique)
       await tx.user.updateMany({
         where: { role: 'PROFESSEUR' },
         data: { actif: false },
@@ -147,6 +183,7 @@ export async function reinitialiserAnneeScolaire() {
     revalidatePath('/admin/classes');
     revalidatePath('/admin/emplois');
     revalidatePath('/admin/utilisateurs');
+    revalidatePath('/admin/comptabilite');
     revalidatePath('/admin/reinitialisation');
 
     return {
