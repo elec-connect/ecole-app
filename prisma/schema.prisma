@@ -88,6 +88,7 @@ model User {
   demandesInscription DemandeInscription[] @relation("DemandeInscriptionEtudiant")
   notifications       Notification[]       @relation("NotificationDestinataire")
   fraisScolarite      FraisScolarite[]     @relation("FraisEleve")
+  tarifsProfesseur    TarifProfesseur[]    @relation("TarifProf")
 }
 
 model ParentEleve {
@@ -300,7 +301,10 @@ model Notification {
   @@index([destinataireId, lu])
 }
 
-// Comptabilité : frais mensuels par élève
+// ============================================================
+// COMPTABILITÉ — ÉLÈVES
+// ============================================================
+
 model FraisScolarite {
   id             String   @id @default(cuid())
   eleveId        String
@@ -315,7 +319,6 @@ model FraisScolarite {
   @@unique([eleveId, anneeScolaire])
 }
 
-// Comptabilité : paiements mensuels
 model Paiement {
   id           String         @id @default(cuid())
   fraisId      String
@@ -330,4 +333,40 @@ model Paiement {
   frais FraisScolarite @relation(fields: [fraisId], references: [id], onDelete: Cascade)
 
   @@unique([fraisId, mois])
+}
+
+// ============================================================
+// COMPTABILITÉ — PROFESSEURS (paie mensuelle)
+// ============================================================
+
+model TarifProfesseur {
+  id            String   @id @default(cuid())
+  professeurId  String
+  anneeScolaire String
+  tauxHoraire   Float    // prix de l'heure en DT
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  professeur User              @relation("TarifProf", fields: [professeurId], references: [id], onDelete: Cascade)
+  paiements  PaieProfesseur[]
+
+  @@unique([professeurId, anneeScolaire])
+}
+
+model PaieProfesseur {
+  id                String         @id @default(cuid())
+  tarifId           String
+  mois              MoisScolaire
+  heuresTravaillees Float
+  tauxHoraire       Float          // copie du taux au moment du paiement
+  montant           Float          // heuresTravaillees * tauxHoraire
+  datePaiement      DateTime       @default(now())
+  methode           String?
+  reference         String?
+  statut            StatutPaiement @default(PAYE)
+  createdAt         DateTime       @default(now())
+
+  tarif TarifProfesseur @relation(fields: [tarifId], references: [id], onDelete: Cascade)
+
+  @@unique([tarifId, mois])
 }
