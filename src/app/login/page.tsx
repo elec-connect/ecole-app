@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -171,6 +172,19 @@ export default function LoginPage() {
           >
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
+
+          {/* ⭐ LIEN VERS L'INSCRIPTION — AJOUTÉ ICI */}
+          <div className="border-t border-gray-200 pt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Pas encore inscrit ?{' '}
+              <Link
+                href="/inscription"
+                className="text-blue-600 hover:underline font-medium"
+              >
+                Faire une demande d&apos;inscription
+              </Link>
+            </p>
+          </div>
         </form>
 
         <InstallerEncart />
