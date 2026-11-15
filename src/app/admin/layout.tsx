@@ -18,6 +18,7 @@ const ITEMS_BASE = [
   { href: '/admin/emplois/generer', label: 'Générer emploi', icon: '🤖' },
   { href: '/admin/moyennes', label: 'Moyennes', icon: '📈' },
   { href: '/admin/archives', label: 'Archives', icon: '📦' },
+  { href: '/admin/demandes-inscription', label: 'Demandes d\'inscription', icon: '📝' },
 ];
 
 // Lien réservé au SUPER_ADMIN

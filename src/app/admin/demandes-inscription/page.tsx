@@ -8,6 +8,16 @@ import { Resend } from 'resend';
 
 export const dynamic = 'force-dynamic';
 
+const NIVEAUX_LABELS: Record<string, string> = {
+  '7eme': '7ème année',
+  '8eme': '8ème année',
+  '9eme': '9ème année',
+  '1ere': '1ère année secondaire',
+  '2eme': '2ème année secondaire',
+  '3eme': '3ème année secondaire',
+  '4eme': '4ème année secondaire',
+};
+
 async function approuver(id: string) {
   'use server';
   const session = await getSession();
@@ -20,6 +30,27 @@ async function approuver(id: string) {
 
   if (!demande || demande.statut !== 'EN_ATTENTE') {
     redirect('/admin/demandes-inscription');
+  }
+
+  const config = await getConfig();
+  const anneeScolaire = config.anneeScolaireCourante;
+
+  // Chercher une classe dont le niveau correspond, dans l'année courante en priorité
+  let classe = await db.classe.findFirst({
+    where: { niveau: demande.niveauDemande, anneeScolaire },
+    orderBy: { nom: 'asc' },
+  });
+
+  if (!classe) {
+    // Fallback : première classe de ce niveau, toutes années confondues
+    classe = await db.classe.findFirst({
+      where: { niveau: demande.niveauDemande },
+      orderBy: { nom: 'asc' },
+    });
+  }
+
+  if (!classe) {
+    redirect('/admin/demandes-inscription?erreur=niveau-introuvable');
   }
 
   // Mot de passe temporaire
@@ -53,18 +84,11 @@ async function approuver(id: string) {
         },
       });
 
-      const classe = await tx.classe.findFirst({
-        where: { nom: demande.classeDemandee },
-      });
-      if (!classe) {
-        throw new Error(`Classe "${demande.classeDemandee}" introuvable`);
-      }
-
       await tx.inscription.create({
         data: {
           etudiantId: etudiant.id,
-          classeId: classe.id,
-          anneeScolaire: classe.anneeScolaire,
+          classeId: classe!.id,
+          anneeScolaire: classe!.anneeScolaire,
         },
       });
 
@@ -74,9 +98,8 @@ async function approuver(id: string) {
       });
     });
 
-    // Email best-effort
+    // Email identifiants (best effort)
     try {
-      const config = await getConfig();
       if (config.resendApiKey && config.emailFrom) {
         const resend = new Resend(config.resendApiKey);
         await resend.emails.send({
@@ -87,9 +110,10 @@ async function approuver(id: string) {
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Inscription validée !</h2>
               <p>Le compte de <strong>${demande.prenom} ${demande.nom}</strong>
-              a été créé et inscrit en classe de <strong>${demande.classeDemandee}</strong>.</p>
-              <p><strong>Email :</strong> ${emailEtudiant}</p>
+              a été créé et inscrit en classe de <strong>${classe!.nom}</strong>.</p>
+              <p><strong>Email de connexion :</strong> ${emailEtudiant}</p>
               <p><strong>Mot de passe temporaire :</strong> ${motDePasseTemporaire}</p>
+              <p>Connectez-vous sur <a href="https://www.smart-haouala.tn/login">https://www.smart-haouala.tn/login</a></p>
             </div>
           `,
         });
@@ -99,10 +123,11 @@ async function approuver(id: string) {
     }
   } catch (e) {
     console.error('[APPROBATION] Erreur:', e);
+    redirect('/admin/demandes-inscription?erreur=creation-compte');
   }
 
   revalidatePath('/admin/demandes-inscription');
-  redirect('/admin/demandes-inscription');
+  redirect('/admin/demandes-inscription?success=1');
 }
 
 async function rejeter(formData: FormData) {
@@ -125,7 +150,13 @@ async function rejeter(formData: FormData) {
   redirect('/admin/demandes-inscription');
 }
 
-export default async function AdminDemandesInscriptionPage() {
+export default async function AdminDemandesInscriptionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ erreur?: string; success?: string }>;
+}) {
+  const params = await searchParams;
+
   const session = await getSession();
   if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
     redirect('/login');
@@ -140,6 +171,27 @@ export default async function AdminDemandesInscriptionPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">📝 Demandes de pré-inscription</h1>
+
+      {params.success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg text-sm">
+          ✅ Demande traitée avec succès. Les identifiants ont été envoyés au parent.
+        </div>
+      )}
+
+      {params.erreur === 'niveau-introuvable' && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+          ❌ Aucune classe n&apos;existe pour ce niveau dans votre base. Créez d&apos;abord une classe dans{' '}
+          <a href="/admin/classes" className="underline font-medium">/admin/classes</a>{' '}
+          avec le niveau correspondant (7eme, 8eme, 9eme, 1ere, 2eme, 3eme, 4eme), puis réessayez.
+        </div>
+      )}
+
+      {params.erreur === 'creation-compte' && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+          ❌ Erreur lors de la création du compte. Vérifiez les logs serveur.
+        </div>
+      )}
+
       <p className="text-gray-500">{demandes.length} demande(s) en attente</p>
 
       {demandes.length === 0 ? (
@@ -153,7 +205,7 @@ export default async function AdminDemandesInscriptionPage() {
               <tr>
                 <th className="p-3 text-left">Élève</th>
                 <th className="p-3 text-left">Parent</th>
-                <th className="p-3 text-left">Classe</th>
+                <th className="p-3 text-left">Niveau</th>
                 <th className="p-3 text-left">Date</th>
                 <th className="p-3 text-left">Actions</th>
               </tr>
@@ -167,7 +219,7 @@ export default async function AdminDemandesInscriptionPage() {
                     <br />
                     <span className="text-gray-400">{d.telephone}</span>
                   </td>
-                  <td className="p-3">{d.classeDemandee}</td>
+                  <td className="p-3">{NIVEAUX_LABELS[d.niveauDemande] ?? d.niveauDemande}</td>
                   <td className="p-3 text-gray-500">
                     {d.createdAt.toLocaleDateString('fr-FR')}
                   </td>

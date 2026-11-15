@@ -504,11 +504,11 @@ All migrations have been successfully applied.</code></pre>
       </div>
     </div>
 
-    <!-- Étape 8 : Bootstrap -->
+    <!-- Étape 8 : Bootstrap — MODIFIÉ : mention SUPER_ADMIN -->
     <div class="step" data-step="8">
       <div class="step-header">
         <div class="step-number">8</div>
-        <h2>Bootstrap (config chiffrée + admin)</h2>
+        <h2>Bootstrap (config chiffrée + admin SUPER_ADMIN)</h2>
         <input type="checkbox" class="step-checkbox" data-step="8">
       </div>
       <div class="step-content">
@@ -517,6 +517,12 @@ All migrations have been successfully applied.</code></pre>
         <pre><code>🚀 Bootstrap de la configuration...
 ✅ Configuration chiffrée écrite en base
 ✅ Admin créé : admin@ecole-client-b.tn / Admin123!</code></pre>
+        <div class="alert alert-success">
+          ✅ Le compte admin créé par le bootstrap a automatiquement le rôle <strong><code>SUPER_ADMIN</code></strong>. Il pourra donc accéder à <code>/admin/configuration</code> après connexion, sans promotion SQL manuelle.
+        </div>
+        <div class="alert alert-warning">
+          ⚠️ Ce compte est le seul à pouvoir accéder à la configuration (Resend, Cron, base de données, etc.). Ne perdez pas ses identifiants.
+        </div>
       </div>
     </div>
 
@@ -611,7 +617,7 @@ vercel env add CRON_SECRET production --value "COLLER_CRON_SECRET" --sensitive -
       </div>
     </div>
 
-    <!-- Étape 14 : CRON_SECRET -->
+    <!-- Étape 14 : CRON_SECRET — MODIFIÉ : précision SUPER_ADMIN -->
     <div class="step" data-step="14" style="border-left-color: var(--purple);">
       <div class="step-header">
         <div class="step-number" style="background: var(--purple);">⏰</div>
@@ -621,8 +627,9 @@ vercel env add CRON_SECRET production --value "COLLER_CRON_SECRET" --sensitive -
       <div class="step-content">
         <ol style="margin-left: 1.5rem; color: var(--gray-600);">
           <li>Ouvrez <code>https://ecole-client-b.vercel.app</code></li>
-          <li>Connectez-vous avec <code>admin@ecole-client-b.tn</code> / <code>Admin123!</code></li>
-          <li>Allez sur <code>/admin/configuration</code></li>
+          <li>Connectez-vous avec <code>admin@ecole-client-b.tn</code> / <code>Admin123!</code> (ce compte est <strong>SUPER_ADMIN</strong>)</li>
+          <li>Allez sur <code>/admin/configuration</code> (réservé au SUPER_ADMIN)</li>
+          <li>Déverrouillez avec le mot de passe de configuration (<code>BOOTSTRAP_CONFIG_PASSWORD</code>, par défaut <code>SahnounBenHaouala18011978</code>)</li>
           <li>Section <strong>⏰ Tâches automatiques (Cron)</strong></li>
           <li>Cliquer <strong>🎲 Générer un secret aléatoire</strong></li>
           <li>Cliquer <strong>📋 Copier</strong></li>
@@ -632,6 +639,9 @@ vercel env add CRON_SECRET production --value "COLLER_CRON_SECRET" --sensitive -
         </ol>
         <div class="alert alert-purple">
           ⚠️ Le secret doit être <strong>identique</strong> dans l'application et dans Vercel. Sinon, le cron retourne 401.
+        </div>
+        <div class="alert alert-info">
+          💡 Seul un compte <code>SUPER_ADMIN</code> peut accéder à <code>/admin/configuration</code>. Le compte créé par le bootstrap a ce rôle. Les comptes <code>ADMIN</code> créés ensuite (profs, personnel) ne verront pas le lien ⚙️ Configuration.
         </div>
       </div>
     </div>
@@ -646,7 +656,7 @@ vercel env add CRON_SECRET production --value "COLLER_CRON_SECRET" --sensitive -
       <div class="step-content">
         <p>Dans l'application, allez dans :</p>
         <ul style="margin-left: 1.5rem; color: var(--gray-600);">
-          <li><code>/admin/configuration</code> → logo, nom de l'école, année scolaire</li>
+          <li><code>/admin/configuration</code> → logo, nom de l'école, année scolaire (SUPER_ADMIN uniquement)</li>
           <li><code>/admin/classes</code> → créer les classes</li>
           <li><code>/admin/matieres</code> → créer les matières</li>
           <li><code>/admin/salles</code> → créer les salles</li>
@@ -687,7 +697,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 # 7. Appliquer les migrations
 npx prisma migrate deploy
 
-# 8. Bootstrap
+# 8. Bootstrap (crée un compte SUPER_ADMIN)
 npm run bootstrap
 
 # 9. (Optionnel) Seed
@@ -711,7 +721,7 @@ vercel env add CRON_SECRET production --value "..." --sensitive --yes
 vercel deploy --prod</code></pre>
     </div>
 
-    <!-- Points de vigilance -->
+    <!-- Points de vigilance — MODIFIÉ : ajout SUPER_ADMIN -->
     <h2 style="margin: 3rem 0 1rem; color: var(--primary);">⚠️ Points de vigilance</h2>
     <table class="comparison-table">
       <thead>
@@ -748,6 +758,10 @@ vercel deploy --prod</code></pre>
         <tr>
           <td><strong>Ne pas lancer le seed</strong></td>
           <td>Pour un vrai client, ne lancez pas <code>prisma db seed</code> (données de test)</td>
+        </tr>
+        <tr>
+          <td><strong>Premier compte = SUPER_ADMIN</strong></td>
+          <td>Le bootstrap crée un compte <code>SUPER_ADMIN</code> (accès configuration). Les comptes <code>ADMIN</code> créés ensuite n'ont pas accès à <code>/admin/configuration</code></td>
         </tr>
       </tbody>
     </table>
@@ -1054,7 +1068,7 @@ TTL          : Par défaut</code></pre>
       </div>
     </div>
 
-    <!-- Étape F : Configurer dans l'app -->
+    <!-- Étape F : Configurer dans l'app — MODIFIÉ : précision SUPER_ADMIN -->
     <div class="step" data-step="resend-6" style="border-left-color: var(--primary);">
       <div class="step-header">
         <div class="step-number" style="background: var(--primary);">F</div>
@@ -1063,8 +1077,8 @@ TTL          : Par défaut</code></pre>
       </div>
       <div class="step-content">
         <ol style="margin-left: 1.5rem; color: var(--gray-600);">
-          <li>Connectez-vous en <strong>SUPER_ADMIN</strong></li>
-          <li>Allez sur <code>/admin/configuration</code> → débloquez avec <code>SahnounBenHaouala18011978</code></li>
+          <li>Connectez-vous avec le compte <strong>SUPER_ADMIN</strong> créé par le bootstrap (<code>admin@ecole-client-b.tn</code>)</li>
+          <li>Allez sur <code>/admin/configuration</code> → débloquez avec le mot de passe de configuration (<code>SahnounBenHaouala18011978</code> par défaut)</li>
           <li>Section <strong>📧 Envoi d'emails (Resend)</strong></li>
           <li><strong>Clé API Resend</strong> : collez la clé complète <code>re_...</code></li>
           <li><strong>Email expéditeur</strong> : <code>ÉcoleApp &lt;noreply@smart-haouala.tn&gt;</code></li>
@@ -1124,14 +1138,14 @@ TTL          : Par défaut</code></pre>
           <tr>
             <td><strong>F</strong></td>
             <td>/admin/configuration</td>
-            <td>Coller la clé + email expéditeur</td>
+            <td>Coller la clé + email expéditeur (SUPER_ADMIN)</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- ============================================================ -->
-    <!-- CHECKLIST FINALE UNIFIÉE -->
+    <!-- CHECKLIST FINALE UNIFIÉE — MODIFIÉ : ajout SUPER_ADMIN -->
     <!-- ============================================================ -->
     <div class="checklist">
       <h2>✅ Checklist finale complète</h2>
@@ -1167,11 +1181,11 @@ TTL          : Par défaut</code></pre>
       </div>
       <div class="checklist-item">
         <input type="checkbox" id="c8">
-        <label for="c8"><code>npm run bootstrap</code> exécuté (admin créé)</label>
+        <label for="c8"><code>npm run bootstrap</code> exécuté (compte SUPER_ADMIN créé)</label>
       </div>
       <div class="checklist-item">
         <input type="checkbox" id="c9">
-        <label for="c9">Test local réussi sur <code>http://localhost:3000</code></label>
+        <label for="c9">Test local réussi sur <code>http://localhost:3000</code> (login SUPER_ADMIN + accès config)</label>
       </div>
       <div class="checklist-item">
         <input type="checkbox" id="c10">
@@ -1219,7 +1233,7 @@ TTL          : Par défaut</code></pre>
       </div>
       <div class="checklist-item">
         <input type="checkbox" id="c20">
-        <label for="c20">Clé API Resend <code>re_...</code> collée dans <code>/admin/configuration</code></label>
+        <label for="c20">Clé API Resend <code>re_...</code> collée dans <code>/admin/configuration</code> (connecté en SUPER_ADMIN)</label>
       </div>
       <div class="checklist-item">
         <input type="checkbox" id="c21">

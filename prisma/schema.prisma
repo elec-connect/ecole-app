@@ -28,6 +28,12 @@ enum TypeNote {
   DEVOIR
 }
 
+enum StatutDemande {
+  EN_ATTENTE
+  APPROUVEE
+  REJETEE
+}
+
 model Configuration {
   id          String   @id @default("singleton")
   donnees     String
@@ -56,6 +62,10 @@ model User {
   matieres       Matiere[]     @relation("ProfMatieres")
   enfants        ParentEleve[] @relation("Parent")
   parents        ParentEleve[] @relation("Eleve")
+
+  // ⭐ Nouvelles relations
+  demandesInscription DemandeInscription[] @relation("DemandeInscriptionEtudiant")
+  notifications       Notification[]       @relation("NotificationDestinataire")
 }
 
 model ParentEleve {
@@ -235,4 +245,35 @@ model Archive {
   nbClasses   Int      @default(0)
   createdAt   DateTime @default(now())
   createdById String?
+}
+
+// ⭐ NOUVEAU : Demandes de pré-inscription (formulaire public)
+model DemandeInscription {
+  id               String        @id @default(cuid())
+  nom              String
+  prenom           String
+  emailParent      String
+  telephone        String?
+  niveauDemande    String        // "7eme", "8eme", "9eme", "1ere", "2eme", "3eme", "4eme"
+  statut           StatutDemande @default(EN_ATTENTE)
+  motifRejet       String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  etudiantId       String?
+  etudiant         User?         @relation("DemandeInscriptionEtudiant", fields: [etudiantId], references: [id])
+}
+
+// ⭐ NOUVEAU : Notifications admin (cloche + badge)
+model Notification {
+  id             String   @id @default(cuid())
+  type           String   // ex: "INSCRIPTION", "SYSTEME"
+  message        String
+  lien           String?  // ex: "/admin/demandes-inscription"
+  lu             Boolean  @default(false)
+  destinataireId String
+  destinataire   User     @relation("NotificationDestinataire", fields: [destinataireId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@index([destinataireId, lu])
 }
