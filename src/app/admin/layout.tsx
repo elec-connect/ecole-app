@@ -8,6 +8,7 @@ import { Header } from '@/components/layout/Header';
 // Liens accessibles à tous les admins
 const ITEMS_BASE = [
   { href: '/admin/dashboard', label: 'Tableau de bord', icon: '📊' },
+  { href: '/admin/absences', label: 'Absences', icon: '📋' },
   { href: '/admin/utilisateurs', label: 'Utilisateurs', icon: '👥' },
   { href: '/admin/classes', label: 'Classes', icon: '🏫' },
   { href: '/admin/matieres', label: 'Matières', icon: '📚' },
@@ -20,6 +21,7 @@ const ITEMS_BASE = [
   { href: '/admin/archives', label: 'Archives', icon: '📦' },
   { href: '/admin/demandes-inscription', label: 'Demandes d\'inscription', icon: '📝' },
   { href: '/admin/comptabilite', label: 'Comptabilité', icon: '💰' },
+  { href: '/admin/seances', label: 'Séances profs', icon: '🕒' },
 ];
 
 // Liens réservés au SUPER_ADMIN
