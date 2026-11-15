@@ -55,6 +55,12 @@ enum MoisScolaire {
   AOUT
 }
 
+enum StatutSeance {
+  EN_ATTENTE
+  CONFIRMEE
+  REJETEE
+}
+
 model Configuration {
   id          String   @id @default("singleton")
   donnees     String
@@ -70,7 +76,7 @@ model User {
   prenom     String
   role       Role
   actif      Boolean  @default(true)
-  emailParent String?          // ← email du parent (pour les ÉLÈVES)
+  emailParent String?          // email du parent (pour les ÉLÈVES)
   createdAt  DateTime @default(now())
 
   coursProf      Cours[]       @relation("ProfCours")
@@ -89,6 +95,8 @@ model User {
   notifications       Notification[]       @relation("NotificationDestinataire")
   fraisScolarite      FraisScolarite[]     @relation("FraisEleve")
   tarifsProfesseur    TarifProfesseur[]    @relation("TarifProf")
+  seancesDeclarees    SeanceTravail[]      @relation("SeancesProf")
+  seancesTraitees     SeanceTravail[]      @relation("SeancesTraitees")
 }
 
 model ParentEleve {
@@ -166,13 +174,14 @@ model Cours {
   heureFin     String
   salleId      String?
 
-  classe      Classe       @relation(fields: [classeId], references: [id], onDelete: Cascade)
-  matiere     Matiere      @relation(fields: [matiereId], references: [id])
-  professeur  User         @relation("ProfCours", fields: [professeurId], references: [id])
-  salle       Salle?       @relation(fields: [salleId], references: [id])
+  classe      Classe         @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  matiere     Matiere        @relation(fields: [matiereId], references: [id])
+  professeur  User           @relation("ProfCours", fields: [professeurId], references: [id])
+  salle       Salle?         @relation(fields: [salleId], references: [id])
   presences   Presence[]
   devoirs     Devoir[]
   evaluations Evaluation[]
+  seances     SeanceTravail[]
 }
 
 model Inscription {
@@ -259,10 +268,10 @@ model Message {
 model Archive {
   id          String   @id @default(cuid())
   anneeScolaire String
-  nom         String   // ex: "6ème A - Archive 2024-2025"
-  type        String   // "notes", "complet"
-  format      String   // "csv", "json"
-  contenu     String   @db.Text  // Le contenu CSV/JSON
+  nom         String
+  type        String
+  format      String
+  contenu     String   @db.Text
   nbEleves    Int      @default(0)
   nbNotes     Int      @default(0)
   nbClasses   Int      @default(0)
@@ -290,9 +299,9 @@ model DemandeInscription {
 // Notifications admin (cloche + badge)
 model Notification {
   id             String   @id @default(cuid())
-  type           String   // ex: "INSCRIPTION", "SYSTEME"
+  type           String
   message        String
-  lien           String?  // ex: "/admin/demandes-inscription"
+  lien           String?
   lu             Boolean  @default(false)
   destinataireId String
   destinataire   User     @relation("NotificationDestinataire", fields: [destinataireId], references: [id], onDelete: Cascade)
@@ -343,7 +352,7 @@ model TarifProfesseur {
   id            String   @id @default(cuid())
   professeurId  String
   anneeScolaire String
-  tauxHoraire   Float    // prix de l'heure en DT
+  tauxHoraire   Float
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -358,8 +367,8 @@ model PaieProfesseur {
   tarifId           String
   mois              MoisScolaire
   heuresTravaillees Float
-  tauxHoraire       Float          // copie du taux au moment du paiement
-  montant           Float          // heuresTravaillees * tauxHoraire
+  tauxHoraire       Float
+  montant           Float
   datePaiement      DateTime       @default(now())
   methode           String?
   reference         String?
@@ -369,4 +378,31 @@ model PaieProfesseur {
   tarif TarifProfesseur @relation(fields: [tarifId], references: [id], onDelete: Cascade)
 
   @@unique([tarifId, mois])
+}
+
+// ============================================================
+// SÉANCES DE TRAVAIL (déclarées par le prof, validées par l'admin)
+// ============================================================
+
+model SeanceTravail {
+  id                String       @id @default(cuid())
+  professeurId      String
+  coursId           String?
+  date              DateTime
+  heuresDeclarees   Float
+  heuresValidees    Float?
+  description       String?
+  statut            StatutSeance @default(EN_ATTENTE)
+  motifRejet        String?
+  declareLe         DateTime     @default(now())
+  traiteLe          DateTime?
+  traiteParId       String?
+  horsEmploi        Boolean      @default(false)
+
+  professeur User   @relation("SeancesProf", fields: [professeurId], references: [id], onDelete: Cascade)
+  cours      Cours? @relation(fields: [coursId], references: [id], onDelete: SetNull)
+  traitePar  User?  @relation("SeancesTraitees", fields: [traiteParId], references: [id])
+
+  @@index([professeurId, date])
+  @@index([statut])
 }
