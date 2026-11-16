@@ -34,15 +34,17 @@ async function approuver(id: string) {
 
   const config = await getConfig();
   const anneeScolaire = config.anneeScolaireCourante;
+  if (!anneeScolaire) {
+    redirect('/admin/demandes-inscription?erreur=annee-manquante');
+  }
 
-  // Chercher une classe dont le niveau correspond, dans l'année courante en priorité
+  // Trouver la classe correspondante
   let classe = await db.classe.findFirst({
     where: { niveau: demande.niveauDemande, anneeScolaire },
     orderBy: { nom: 'asc' },
   });
 
   if (!classe) {
-    // Fallback : première classe de ce niveau, toutes années confondues
     classe = await db.classe.findFirst({
       where: { niveau: demande.niveauDemande },
       orderBy: { nom: 'asc' },
@@ -53,52 +55,110 @@ async function approuver(id: string) {
     redirect('/admin/demandes-inscription?erreur=niveau-introuvable');
   }
 
-  // Mot de passe temporaire
-  const motDePasseTemporaire = Math.random().toString(36).slice(-8) + 'A1!';
-  const hash = await bcrypt.hash(motDePasseTemporaire, 10);
-
-  // Email unique
-  const baseEmail = `${demande.prenom.toLowerCase()}.${demande.nom.toLowerCase()}`
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '');
-
-  let emailEtudiant = `${baseEmail}@ecole.tn`;
-  let suffixe = 1;
-  while (await db.user.findUnique({ where: { email: emailEtudiant } })) {
-    emailEtudiant = `${baseEmail}${suffixe}@ecole.tn`;
-    suffixe++;
-  }
+  // Générer les mots de passe temporaires
+  const mdpEleve = Math.random().toString(36).slice(-8) + 'A1!';
+  const mdpParent = Math.random().toString(36).slice(-8) + 'A1!';
+  const hashEleve = await bcrypt.hash(mdpEleve, 10);
+  const hashParent = await bcrypt.hash(mdpParent, 10);
 
   try {
     await db.$transaction(async (tx) => {
-      const etudiant = await tx.user.create({
-        data: {
-          email: emailEtudiant,
-          motDePasse: hash,
-          nom: demande.nom,
-          prenom: demande.prenom,
-          role: 'ETUDIANT',
-          actif: true,
-          emailParent: demande.emailParent,
+      // 1. Gérer le parent (création ou récupération)
+      let parent = await tx.user.findUnique({
+        where: { email: demande.emailParent },
+      });
+
+      if (!parent) {
+        parent = await tx.user.create({
+          data: {
+            email: demande.emailParent,
+            motDePasse: hashParent,
+            nom: demande.nomParent,
+            prenom: demande.prenomParent,
+            role: 'PARENT',
+            actif: true,
+          },
+        });
+      }
+
+      // 2. Gérer l'élève (création ou récupération)
+      let etudiant = await tx.user.findUnique({
+        where: { email: demande.emailEleve },
+      });
+
+      if (!etudiant) {
+        etudiant = await tx.user.create({
+          data: {
+            email: demande.emailEleve,
+            motDePasse: hashEleve,
+            nom: demande.nom,
+            prenom: demande.prenom,
+            role: 'ETUDIANT',
+            actif: true,
+            emailParent: demande.emailParent,
+          },
+        });
+      } else {
+        // L'élève existe déjà → on met à jour ses infos (nom, prénom, emailParent)
+        etudiant = await tx.user.update({
+          where: { id: etudiant.id },
+          data: {
+            nom: demande.nom,
+            prenom: demande.prenom,
+            emailParent: demande.emailParent,
+            actif: true,
+          },
+        });
+      }
+
+      // 3. Lier le parent à l'élève (si pas déjà fait)
+      const lienExistant = await tx.parentEleve.findUnique({
+        where: {
+          parentId_eleveId: { parentId: parent.id, eleveId: etudiant.id },
         },
       });
 
-      await tx.inscription.create({
-        data: {
+      if (!lienExistant) {
+        await tx.parentEleve.create({
+          data: {
+            parentId: parent.id,
+            eleveId: etudiant.id,
+            relation: 'parent',
+          },
+        });
+      }
+
+      // 4. Inscrire l'élève dans la classe (si pas déjà fait)
+      const inscriptionExistante = await tx.inscription.findFirst({
+        where: {
           etudiantId: etudiant.id,
           classeId: classe!.id,
           anneeScolaire: classe!.anneeScolaire,
         },
       });
 
+      if (!inscriptionExistante) {
+        await tx.inscription.create({
+          data: {
+            etudiantId: etudiant.id,
+            classeId: classe!.id,
+            anneeScolaire: classe!.anneeScolaire,
+          },
+        });
+      }
+
+      // 5. Marquer la demande comme approuvée
       await tx.demandeInscription.update({
         where: { id },
-        data: { statut: 'APPROUVEE', etudiantId: etudiant.id },
+        data: {
+          statut: 'APPROUVEE',
+          etudiantId: etudiant.id,
+          parentId: parent.id,
+        },
       });
     });
 
-    // Email identifiants (best effort)
+    // 6. Envoyer l'email avec les identifiants
     try {
       if (config.resendApiKey && config.emailFrom) {
         const resend = new Resend(config.resendApiKey);
@@ -109,10 +169,16 @@ async function approuver(id: string) {
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Inscription validée !</h2>
-              <p>Le compte de <strong>${demande.prenom} ${demande.nom}</strong>
-              a été créé et inscrit en classe de <strong>${classe!.nom}</strong>.</p>
-              <p><strong>Email de connexion :</strong> ${emailEtudiant}</p>
-              <p><strong>Mot de passe temporaire :</strong> ${motDePasseTemporaire}</p>
+              <p>Le compte de <strong>${demande.prenom} ${demande.nom}</strong> a été traité.</p>
+
+              <h3>👦 Élève</h3>
+              <p><strong>Email :</strong> ${demande.emailEleve}<br/>
+              <strong>Mot de passe :</strong> ${mdpEleve}</p>
+
+              <h3>👨‍👩‍👦 Parent</h3>
+              <p><strong>Email :</strong> ${demande.emailParent}<br/>
+              <strong>Mot de passe :</strong> ${mdpParent}</p>
+
               <p>Connectez-vous sur <a href="https://www.smart-haouala.tn/login">https://www.smart-haouala.tn/login</a></p>
             </div>
           `,
@@ -121,7 +187,8 @@ async function approuver(id: string) {
     } catch (e) {
       console.error('[APPROBATION] Erreur email:', e);
     }
-  } catch (e) {
+
+  } catch (e: any) {
     console.error('[APPROBATION] Erreur:', e);
     redirect('/admin/demandes-inscription?erreur=creation-compte');
   }
@@ -174,7 +241,7 @@ export default async function AdminDemandesInscriptionPage({
 
       {params.success && (
         <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg text-sm">
-          ✅ Demande traitée avec succès. Les identifiants ont été envoyés au parent.
+          ✅ Demande traitée avec succès. Les identifiants élève et parent ont été envoyés par email.
         </div>
       )}
 
@@ -182,13 +249,19 @@ export default async function AdminDemandesInscriptionPage({
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
           ❌ Aucune classe n&apos;existe pour ce niveau dans votre base. Créez d&apos;abord une classe dans{' '}
           <a href="/admin/classes" className="underline font-medium">/admin/classes</a>{' '}
-          avec le niveau correspondant (7eme, 8eme, 9eme, 1ere, 2eme, 3eme, 4eme), puis réessayez.
+          avec le niveau correspondant, puis réessayez.
         </div>
       )}
 
       {params.erreur === 'creation-compte' && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
-          ❌ Erreur lors de la création du compte. Vérifiez les logs serveur.
+          ❌ Erreur lors de la création des comptes. Vérifiez les logs serveur ou assurez-vous que l&apos;email de l&apos;élève n&apos;est pas déjà utilisé.
+        </div>
+      )}
+
+      {params.erreur === 'annee-manquante' && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+          ❌ Année scolaire non configurée. Allez dans <a href="/admin/configuration" className="underline">/admin/configuration</a>.
         </div>
       )}
 
@@ -213,11 +286,14 @@ export default async function AdminDemandesInscriptionPage({
             <tbody>
               {demandes.map((d) => (
                 <tr key={d.id} className="border-b last:border-0">
-                  <td className="p-3 font-medium">{d.prenom} {d.nom}</td>
                   <td className="p-3">
-                    {d.emailParent}
-                    <br />
-                    <span className="text-gray-400">{d.telephone}</span>
+                    <div className="font-medium">{d.prenom} {d.nom}</div>
+                    <div className="text-xs text-gray-500">{d.emailEleve}</div>
+                  </td>
+                  <td className="p-3">
+                    <div className="font-medium">{d.prenomParent} {d.nomParent}</div>
+                    <div className="text-xs text-gray-500">{d.emailParent}</div>
+                    <div className="text-xs text-gray-400">{d.telephone}</div>
                   </td>
                   <td className="p-3">{NIVEAUX_LABELS[d.niveauDemande] ?? d.niveauDemande}</td>
                   <td className="p-3 text-gray-500">
