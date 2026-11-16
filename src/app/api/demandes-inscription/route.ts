@@ -5,9 +5,12 @@ import { getConfig } from '@/lib/config';
 import { Resend } from 'resend';
 
 const schema = z.object({
-  nom: z.string().min(2),
-  prenom: z.string().min(2),
-  emailParent: z.string().email(),
+  nom: z.string().min(2, 'Nom de l\'élève requis'),
+  prenom: z.string().min(2, 'Prénom de l\'élève requis'),
+  emailEleve: z.string().email('Email élève invalide'),
+  emailParent: z.string().email('Email parent invalide'),
+  nomParent: z.string().min(2, 'Nom du parent requis'),
+  prenomParent: z.string().min(2, 'Prénom du parent requis'),
   telephone: z.string().optional().or(z.literal('')),
   niveauDemande: z.enum(['7eme', '8eme', '9eme', '1ere', '2eme', '3eme', '4eme']),
 });
@@ -26,33 +29,39 @@ export async function POST(req: Request) {
 
     const db = await getPrismaDynamic();
 
-    // Vérifier qu'une demande n'est pas déjà en attente pour cet email
+    // ⭐ VÉRIFICATION : on ne bloque que si l'EMAIL ÉLÈVE est déjà en attente.
+    // L'email parent n'est plus vérifié, ce qui permet à un parent 
+    // d'inscrire plusieurs enfants en même temps.
     const existante = await db.demandeInscription.findFirst({
       where: {
-        emailParent: parsed.data.emailParent,
+        emailEleve: parsed.data.emailEleve,
         statut: 'EN_ATTENTE',
       },
     });
 
     if (existante) {
       return NextResponse.json(
-        { erreur: 'Une demande est déjà en attente pour cet email.' },
+        { erreur: 'Une demande est déjà en attente pour cet email élève.' },
         { status: 409 }
       );
     }
 
+    // Créer la demande de pré-inscription
     const demande = await db.demandeInscription.create({
       data: {
         nom: parsed.data.nom,
         prenom: parsed.data.prenom,
+        emailEleve: parsed.data.emailEleve,
         emailParent: parsed.data.emailParent,
+        nomParent: parsed.data.nomParent,
+        prenomParent: parsed.data.prenomParent,
         telephone: parsed.data.telephone || null,
         niveauDemande: parsed.data.niveauDemande,
         statut: 'EN_ATTENTE',
       },
     });
 
-    // Notification pour tous les admins
+    // Créer une notification pour les admins
     try {
       const admins = await db.user.findMany({
         where: { role: { in: ['ADMIN', 'SUPER_ADMIN'] }, actif: true },
@@ -73,11 +82,12 @@ export async function POST(req: Request) {
       console.error('[DEMANDE INSCRIPTION] Erreur notification:', notifError);
     }
 
-    // Email de confirmation au parent (best effort)
+    // Envoyer un email de confirmation au parent
     try {
       const config = await getConfig();
       if (config.resendApiKey && config.emailFrom) {
         const resend = new Resend(config.resendApiKey);
+        
         const niveauLabel =
           {
             '7eme': '7ème année',
@@ -95,9 +105,9 @@ export async function POST(req: Request) {
           subject: 'Confirmation de votre demande d\'inscription',
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>Bonjour,</h2>
+              <h2>Bonjour ${parsed.data.prenomParent} ${parsed.data.nomParent},</h2>
               <p>Nous avons bien reçu votre demande d'inscription pour <strong>${parsed.data.prenom} ${parsed.data.nom}</strong> en <strong>${niveauLabel}</strong>.</p>
-              <p>Votre demande est actuellement <strong>en cours d'examen</strong>. Vous recevrez un email dès qu'elle sera validée.</p>
+              <p>Votre demande est actuellement <strong>en cours d'examen</strong>. Vous recevrez un email avec les identifiants de connexion (élève et parent) dès qu'elle sera validée.</p>
               <p>Cordialement,<br/>L'administration</p>
             </div>
           `,
