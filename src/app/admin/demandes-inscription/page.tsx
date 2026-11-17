@@ -44,6 +44,7 @@ async function approuver(id: string) {
   }
 
   const config = await getConfig();
+  const appUrl = (config as any).appUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const anneeScolaire = config.anneeScolaireCourante;
   if (!anneeScolaire) {
     redirect('/admin/demandes-inscription?erreur=annee-manquante');
@@ -209,7 +210,7 @@ async function approuver(id: string) {
               <p><strong>Email :</strong> ${demande.emailParent}<br/>
               <strong>Mot de passe :</strong> ${mdpParent}</p>
 
-              <p>Connectez-vous sur <a href="https://www.smart-haouala.tn/login">https://www.smart-haouala.tn/login</a></p>
+              <p>Connectez-vous sur <a href="${appUrl}/login">${appUrl}/login</a></p>
             </div>
           `,
         });

@@ -12,6 +12,11 @@ type BeforeInstallPromptEvent = Event & {
 function InstallerEncart() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
+  
+  // ⭐ Utiliser l'URL courante du navigateur ou la variable d'environnement
+  const appUrl = typeof window !== 'undefined' 
+    ? window.location.origin 
+    : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -61,12 +66,12 @@ function InstallerEncart() {
           <li>
             Ouvrez{' '}
             <a
-              href="https://www.smart-haouala.tn"
+              href={appUrl}
               className="underline font-medium"
               target="_blank"
               rel="noopener noreferrer"
             >
-              https://www.smart-haouala.tn
+              {appUrl}
             </a>{' '}
             dans Chrome ou Edge
           </li>
