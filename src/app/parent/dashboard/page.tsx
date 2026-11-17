@@ -3,6 +3,8 @@ import { getPrismaDynamic } from '@/lib/prisma-dynamic';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+export const dynamic = 'force-dynamic'; // ⭐ Ajouté
+
 export default async function ParentDashboard() {
   const session = await getSession();
   if (!session) return null;
@@ -25,20 +27,37 @@ export default async function ParentDashboard() {
     },
   });
 
+  // ⭐ Récupérer le nombre de devoirs pour chaque enfant
+  const liensAvecDevoirs = await Promise.all(
+    liens.map(async (lien) => {
+      const classe = lien.eleve.inscriptions[0]?.classe;
+      let nbDevoirs = 0;
+      if (classe) {
+        nbDevoirs = await db.devoir.count({
+          where: {
+            cours: { classeId: classe.id },
+            deadline: { gte: new Date() },
+          },
+        });
+      }
+      return { ...lien, nbDevoirs };
+    })
+  );
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Mes enfants</h1>
-        <p className="text-gray-500 mt-1">{liens.length} enfant(s)</p>
+        <p className="text-gray-500 mt-1">{liensAvecDevoirs.length} enfant(s)</p>
       </div>
 
-      {liens.length === 0 ? (
+      {liensAvecDevoirs.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <p className="text-gray-500 text-sm">Aucun enfant lié à votre compte. Contactez l'administration.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {liens.map((lien) => {
+          {liensAvecDevoirs.map((lien) => {
             const eleve = lien.eleve;
             const classe = eleve.inscriptions[0]?.classe;
             return (
@@ -58,7 +77,8 @@ export default async function ParentDashboard() {
                   <div className="text-3xl">👨‍🎓</div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* ⭐ 3 compteurs au lieu de 2 */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="bg-blue-50 rounded-lg p-3">
                     <p className="text-xs text-blue-700 uppercase">Notes</p>
                     <p className="text-xl font-bold text-blue-700">{eleve.notes.length}</p>
@@ -67,14 +87,22 @@ export default async function ParentDashboard() {
                     <p className="text-xs text-orange-700 uppercase">Absences</p>
                     <p className="text-xl font-bold text-orange-700">{eleve.presences.length}</p>
                   </div>
+                  <div className="bg-purple-50 rounded-lg p-3">
+                    <p className="text-xs text-purple-700 uppercase">Devoirs</p>
+                    <p className="text-xl font-bold text-purple-700">{lien.nbDevoirs}</p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                {/* ⭐ 4 boutons au lieu de 3 */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <Link href={'/parent/enfant/' + eleve.id + '/notes'} className="text-center text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded">
                     📝 Notes
                   </Link>
                   <Link href={'/parent/enfant/' + eleve.id + '/absences'} className="text-center text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded">
                     📅 Absences
+                  </Link>
+                  <Link href={'/parent/enfant/' + eleve.id + '/devoirs'} className="text-center text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded">
+                    📚 Devoirs
                   </Link>
                   <Link href={'/parent/enfant/' + eleve.id + '/bulletin'} className="text-center text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded">
                     📄 Bulletin
