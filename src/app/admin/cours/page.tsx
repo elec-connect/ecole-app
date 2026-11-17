@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 
-type Classe = { id: string; nom: string; niveau: string };
+type Classe = { id: string; nom: string; niveau: string; anneeScolaire: string };
 type Matiere = { id: string; nom: string; coefficient: number };
 type Prof = { id: string; nom: string; prenom: string; email: string };
 type Salle = { id: string; nom: string; type: string | null };
@@ -44,6 +44,10 @@ export default function CoursAdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [filtreClasse, setFiltreClasse] = useState<string>('TOUTES');
+  
+  // ⭐ NOUVEAU : filtre par année scolaire
+  const [filtreAnnee, setFiltreAnnee] = useState<string>('TOUTES');
+  const [anneesDisponibles, setAnneesDisponibles] = useState<string[]>([]);
 
   async function charger() {
     const [rc, rcl, rm, rp, rs] = await Promise.all([
@@ -53,21 +57,49 @@ export default function CoursAdminPage() {
       fetch('/api/utilisateurs?role=PROFESSEUR'),
       fetch('/api/salles'),
     ]);
-    setCours(await rc.json());
-    setClasses(await rcl.json());
+    
+    const coursData = await rc.json();
+    const classesData = await rcl.json();
+    
+    setCours(coursData);
+    setClasses(classesData);
     setMatieres(await rm.json());
     setProfs(await rp.json());
     setSalles(await rs.json());
+
+    // ⭐ Extraire les années scolaires uniques depuis les classes
+    const annees = Array.from(new Set(classesData.map((c: Classe) => c.anneeScolaire))).sort().reverse();
+    setAnneesDisponibles(annees as string[]);
+    
+    // Sélectionner l'année la plus récente par défaut
+    if (annees.length > 0 && filtreAnnee === 'TOUTES') {
+      setFiltreAnnee(annees[0] as string);
+    }
   }
 
   useEffect(() => {
     charger();
   }, []);
 
+  // ⭐ Filtrer les classes selon l'année sélectionnée (pour le menu déroulant de création)
+  const classesFiltrees = useMemo(() => {
+    if (filtreAnnee === 'TOUTES') return classes;
+    return classes.filter(c => c.anneeScolaire === filtreAnnee);
+  }, [classes, filtreAnnee]);
+
+  // ⭐ Grouper les cours en appliquant les filtres d'année et de classe
   const coursGroupes = useMemo(() => {
-    const filtered = filtreClasse === 'TOUTES'
-      ? cours
-      : cours.filter((c) => c.classe.id === filtreClasse);
+    let filtered = cours;
+
+    // Filtre par année scolaire
+    if (filtreAnnee !== 'TOUTES') {
+      filtered = filtered.filter((c) => c.classe.anneeScolaire === filtreAnnee);
+    }
+
+    // Filtre par classe
+    if (filtreClasse !== 'TOUTES') {
+      filtered = filtered.filter((c) => c.classe.id === filtreClasse);
+    }
 
     const map = new Map<string, { classe: Classe; cours: Cours[] }>();
     for (const c of filtered) {
@@ -79,7 +111,7 @@ export default function CoursAdminPage() {
     return Array.from(map.values()).sort((a, b) =>
       (a.classe.niveau + a.classe.nom).localeCompare(b.classe.niveau + b.classe.nom)
     );
-  }, [cours, filtreClasse]);
+  }, [cours, filtreClasse, filtreAnnee]);
 
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault();
@@ -153,14 +185,57 @@ export default function CoursAdminPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Gestion des cours</h1>
         <p className="text-gray-500 mt-1">
-          {cours.length} cours · Chaque cours relie une matière, une classe, un professeur et une salle
+          {coursGroupes.reduce((sum, g) => sum + g.cours.length, 0)} cours affichés · Chaque cours relie une matière, une classe, un professeur et une salle
         </p>
+      </div>
+
+      {/* ⭐ NOUVEAU : Barre de filtres (Année + Classe) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Année scolaire</label>
+          <select
+            value={filtreAnnee}
+            onChange={(e) => {
+              setFiltreAnnee(e.target.value);
+              setFiltreClasse('TOUTES'); // Reset le filtre classe quand on change d'année
+            }}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium bg-gray-50 focus:bg-white transition"
+          >
+            <option value="TOUTES">Toutes les années</option>
+            {anneesDisponibles.map((annee) => (
+              <option key={annee} value={annee}>{annee}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Classe</label>
+          <select
+            value={filtreClasse}
+            onChange={(e) => setFiltreClasse(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm min-w-[200px]"
+          >
+            <option value="TOUTES">Toutes les classes</option>
+            {classesFiltrees.map((c) => (
+              <option key={c.id} value={c.id}>{c.nom} ({c.niveau})</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="ml-auto text-sm text-gray-500 italic">
+          {filtreAnnee !== 'TOUTES' && `Affichage de l'année ${filtreAnnee}`}
+        </div>
       </div>
 
       {/* Formulaire */}
       <div className={'bg-white rounded-xl shadow-sm border-2 p-6 ' + (edition ? 'border-blue-400' : 'border-gray-100')}>
-        <h2 className="font-semibold mb-4">
-          {edition ? '✏️ Modifier le cours' : '➕ Nouveau cours'}
+        <h2 className="font-semibold mb-4 flex items-center justify-between">
+          <span>{edition ? '✏️ Modifier le cours' : '➕ Nouveau cours'}</span>
+          {filtreAnnee !== 'TOUTES' && (
+            <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+              Année active : {filtreAnnee}
+            </span>
+          )}
         </h2>
         <form onSubmit={enregistrer} className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
@@ -172,8 +247,10 @@ export default function CoursAdminPage() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             >
               <option value="">— Sélectionner —</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nom} ({c.niveau})</option>
+              {classesFiltrees.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nom} ({c.niveau}) {c.anneeScolaire && `- ${c.anneeScolaire}`}
+                </option>
               ))}
             </select>
           </div>
@@ -222,11 +299,6 @@ export default function CoursAdminPage() {
                 </option>
               ))}
             </select>
-            {salles.length === 0 && (
-              <p className="text-xs text-orange-500 mt-1">
-                ⚠️ Créez des salles dans /admin/salles
-              </p>
-            )}
           </div>
 
           <div>
@@ -286,33 +358,22 @@ export default function CoursAdminPage() {
         </form>
       </div>
 
-      {/* Filtre */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Filtrer par classe</label>
-        <select
-          value={filtreClasse}
-          onChange={(e) => setFiltreClasse(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-        >
-          <option value="TOUTES">Toutes les classes</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>{c.nom} ({c.niveau})</option>
-          ))}
-        </select>
-      </div>
-
       {/* Liste groupée */}
       {coursGroupes.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <p className="text-gray-500 text-sm">Aucun cours enregistré.</p>
+          <p className="text-gray-500 text-sm">Aucun cours enregistré pour ces filtres.</p>
         </div>
       ) : (
         coursGroupes.map((groupe) => (
           <div key={groupe.classe.id} className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="p-4 border-b border-gray-100 bg-gray-50 rounded-t-xl">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 🏫 {groupe.classe.nom}{' '}
                 <span className="text-sm text-gray-500 font-normal">({groupe.classe.niveau})</span>
+                {/* ⭐ Affichage de l'année scolaire */}
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                  {groupe.classe.anneeScolaire}
+                </span>
               </h2>
               <p className="text-xs text-gray-500 mt-1">{groupe.cours.length} cours</p>
             </div>

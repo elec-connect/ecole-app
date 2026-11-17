@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ÉcoleApp — Rôles et Parcours d'inscription</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --danger: #dc2626;
+      --purple: #7c3aed;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-600: #4b5563;
+      --gray-900: #111827;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    header p { font-size: 1.1rem; opacity: 0.9; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+    .section-title {
+      font-size: 1.8rem;
+      color: var(--primary);
+      margin: 3rem 0 1.5rem;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 0.5rem;
+    }
+
+    /* Cartes de rôle */
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .role-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border-left: 5px solid var(--primary);
+      transition: transform 0.2s;
+    }
+    .role-card:hover { transform: translateY(-3px); }
+    .role-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .role-card p { color: var(--gray-600); font-size: 0.95rem; margin-bottom: 0.8rem; }
+    .role-card ul { margin-left: 1.2rem; color: var(--gray-600); font-size: 0.9rem; }
+    .role-card li { margin-bottom: 0.3rem; }
+
+    /* Badges de rôle */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: auto;
+    }
+    .badge-super { background: #fee2e2; color: #7f1d1d; }
+    .badge-admin { background: #dbeafe; color: #1e3a8a; }
+    .badge-prof { background: #ede9fe; color: #4c1d95; }
+    .badge-eleve { background: #dcfce7; color: #14532d; }
+    .badge-parent { background: #fef3c7; color: #92400e; }
+
+    /* Parcours (étapes) */
+    .steps { position: relative; padding-left: 2rem; }
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 10px; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--gray-200);
+    }
+    .step {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--gray-200);
+    }
+    .step::before {
+      content: attr(data-step);
+      position: absolute;
+      left: -2.8rem; top: 1.5rem;
+      width: 36px; height: 36px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1rem;
+      border: 3px solid var(--gray-50);
+    }
+    .step h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--primary); }
+    .step .actor {
+      display: inline-block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.15rem 0.6rem;
+      border-radius: 20px;
+      margin-bottom: 0.6rem;
+    }
+    .actor-eleve { background: #dcfce7; color: #14532d; }
+    .actor-parent { background: #fef3c7; color: #92400e; }
+    .actor-admin { background: #dbeafe; color: #1e3a8a; }
+    .step p { color: var(--gray-600); font-size: 0.95rem; margin-bottom: 0.5rem; }
+    .step code {
+      background: var(--gray-100);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: 0.85rem;
+      color: var(--danger);
+    }
+
+    /* Info boxes */
+    .info-box {
+      background: #eff6ff;
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    .info-box strong { color: var(--primary); }
+
+    .success-box {
+      background: #f0fdf4;
+      border-left: 4px solid var(--success);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+
+    /* Tableau comparatif */
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .table th, .table td {
+      padding: 0.8rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 0.9rem;
+    }
+    .table th {
+      background: var(--gray-50);
+      font-weight: 600;
+    }
+    .table tr:last-child td { border-bottom: none; }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--gray-600);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--gray-200);
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.8rem; }
+      .step { padding-left: 1rem; }
+      .step::before { left: -2.2rem; width: 30px; height: 30px; font-size: 0.85rem; }
+      .steps { padding-left: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>👥 ÉcoleApp — Rôles & Parcours</h1>
+    <p>Comprendre qui fait quoi, et comment se déroule une inscription de A à Z</p>
+  </header>
+
+  <div class="container">
+
+    <!-- ============================================================ -->
+    <!-- SECTION 1 : LES RÔLES -->
+    <!-- ============================================================ -->
+    <h2 class="section-title">🔑 Les rôles dans ÉcoleApp</h2>
+    <p style="color: var(--gray-600); margin-bottom: 1.5rem;">
+      Chaque utilisateur possède un rôle qui détermine ce qu'il peut voir et faire dans l'application.
+    </p>
+
+    <div class="roles-grid">
+      
+      <!-- Super Admin -->
+      <div class="role-card" style="border-left-color: var(--danger);">
+        <h3>👑 Super Administrateur <span class="badge badge-super">SUPER_ADMIN</span></h3>
+        <p>Le propriétaire de la plateforme. Il a un accès total.</p>
+        <ul>
+          <li>Accès à toutes les fonctionnalités</li>
+          <li>Configuration de l'école (logo, année, Resend...)</li>
+          <li>Réinitialisation de l'année scolaire</li>
+          <li>Gestion des autres administrateurs</li>
+        </ul>
+      </div>
+
+      <!-- Admin -->
+      <div class="role-card">
+        <h3>🛠️ Administrateur <span class="badge badge-admin">ADMIN</span></h3>
+        <p>Le personnel administratif de l'école (secrétariat, direction).</p>
+        <ul>
+          <li>Gestion des élèves, professeurs et parents</li>
+          <li>Gestion des classes, matières, salles</li>
+          <li>Emplois du temps et notes</li>
+          <li>Validation des demandes d'inscription</li>
+          <li>Comptabilité (frais et paie)</li>
+        </ul>
+      </div>
+
+      <!-- Professeur -->
+      <div class="role-card" style="border-left-color: var(--purple);">
+        <h3>👨‍🏫 Professeur <span class="badge badge-prof">PROFESSEUR</span></h3>
+        <p>L'enseignant qui intervient auprès des classes.</p>
+        <ul>
+          <li>Consulter son emploi du temps</li>
+          <li>Faire l'appel (présences/absences)</li>
+          <li>Saisir les notes de ses élèves</li>
+          <li>Déclarer ses séances travaillées</li>
+          <li>Consulter ses devoirs</li>
+        </ul>
+      </div>
+
+      <!-- Élève -->
+      <div class="role-card" style="border-left-color: var(--success);">
+        <h3>👨‍🎓 Élève <span class="badge badge-eleve">ETUDIANT</span></h3>
+        <p>L'apprenant inscrit dans une classe.</p>
+        <ul>
+          <li>Consulter son emploi du temps</li>
+          <li>Voir ses notes et ses moyennes</li>
+          <li>Consulter son bulletin</li>
+          <li>Voir ses absences</li>
+          <li>Accéder à ses devoirs</li>
+        </ul>
+      </div>
+
+      <!-- Parent -->
+      <div class="role-card" style="border-left-color: var(--warning);">
+        <h3>👨‍👩‍👦 Parent <span class="badge badge-parent">PARENT</span></h3>
+        <p>Le représentant légal de l'élève.</p>
+        <ul>
+          <li>Suivre les notes de son enfant</li>
+          <li>Consulter ses absences</li>
+          <li>Recevoir les notifications par email</li>
+          <li>Accéder au bulletin scolaire</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 2 : PARCOURS D'INSCRIPTION -->
+    <!-- ============================================================ -->
+    <h2 class="section-title">🔄 Parcours d'inscription : de A à Z</h2>
+    <p style="color: var(--gray-600); margin-bottom: 1.5rem;">
+      Voici, étape par étape, comment un nouvel élève rejoint l'école via ÉcoleApp. 
+      <strong>Le processus est 100% automatisé pour l'administrateur.</strong>
+    </p>
+
+    <div class="steps">
+
+      <!-- Étape 1 -->
+      <div class="step" data-step="1">
+        <span class="actor actor-parent">👨‍👩‍👦 Parent</span>
+        <h3>Le parent remplit le formulaire de pré-inscription</h3>
+        <p>Le parent se rend sur la page publique <code>/inscription</code> et remplit les informations :</p>
+        <ul style="margin-left: 1.2rem; color: var(--gray-600); font-size: 0.95rem;">
+          <li>Nom et prénom de l'élève</li>
+          <li><strong>Email de l'élève</strong> (qui servira d'identifiant)</li>
+          <li>Nom, prénom et email du parent</li>
+          <li>Téléphone et niveau souhaité</li>
+        </ul>
+        <div class="info-box">
+          <strong>💡 Ce qui se passe côté serveur :</strong> une <code>DemandeInscription</code> est créée avec le statut <code>EN_ATTENTE</code>. 
+          Un email de confirmation est automatiquement envoyé au parent.
+        </div>
+      </div>
+
+      <!-- Étape 2 -->
+      <div class="step" data-step="2">
+        <span class="actor actor-admin">🛠️ Administrateur</span>
+        <h3>L'administrateur est notifié</h3>
+        <p>Une <strong>notification</strong> apparaît dans la cloche du tableau de bord, et un badge rouge s'affiche sur le lien <code>Demandes d'inscription</code>.</p>
+        <p>L'administrateur clique sur le menu et voit la liste des demandes en attente, avec toutes les informations déjà pré-remplies (élève, parent, niveau).</p>
+      </div>
+
+      <!-- Étape 3 -->
+      <div class="step" data-step="3">
+        <span class="actor actor-admin">🛠️ Administrateur</span>
+        <h3>L'administrateur approuve la demande en un clic</h3>
+        <p>En cliquant sur <strong>✅ Approuver</strong>, l'application effectue automatiquement en une seule transaction :</p>
+        <ul style="margin-left: 1.2rem; color: var(--gray-600); font-size: 0.95rem;">
+          <li>Création du <strong>compte Élève</strong> (rôle <code>ETUDIANT</code>)</li>
+          <li>Création du <strong>compte Parent</strong> (rôle <code>PARENT</code>)</li>
+          <li>Liaison entre le parent et l'élève</li>
+          <li>Inscription de l'élève dans la classe correspondant à son niveau</li>
+          <li>Mise à jour du statut de la demande en <code>APPROUVEE</code></li>
+        </ul>
+        <div class="success-box">
+          <strong>✅ Résultat :</strong> deux comptes sont créés instantanément, sans aucune saisie supplémentaire pour l'administrateur.
+        </div>
+      </div>
+
+      <!-- Étape 4 -->
+      <div class="step" data-step="4">
+        <span class="actor actor-parent">👨‍👩‍👦 Parent & Élève</span>
+        <h3>Les identifiants sont envoyés par email</h3>
+        <p>Le parent reçoit un email contenant :</p>
+        <ul style="margin-left: 1.2rem; color: var(--gray-600); font-size: 0.95rem;">
+          <li>Les <strong>identifiants de l'élève</strong> (email + mot de passe temporaire)</li>
+          <li>Les <strong>identifiants du parent</strong> (email + mot de passe temporaire)</li>
+          <li>Le lien de connexion</li>
+        </ul>
+        <div class="info-box">
+          <strong>💡 Sécurité :</strong> les mots de passe sont générés automatiquement et doivent être changés à la première connexion.
+        </div>
+      </div>
+
+      <!-- Étape 5 -->
+      <div class="step" data-step="5">
+        <span class="actor actor-eleve">👨‍🎓 Élève</span>
+        <h3>L'élève se connecte et accède à son espace</h3>
+        <p>L'élève se rend sur <code>/login</code>, entre son email et son mot de passe temporaire. Il est immédiatement redirigé vers son tableau de bord, où il peut consulter :</p>
+        <ul style="margin-left: 1.2rem; color: var(--gray-600); font-size: 0.95rem;">
+          <li>Son emploi du temps</li>
+          <li>Ses notes et moyennes</li>
+          <li>Ses absences</li>
+          <li>Ses devoirs</li>
+        </ul>
+      </div>
+
+      <!-- Étape 6 -->
+      <div class="step" data-step="6">
+        <span class="actor actor-parent">👨‍👩‍👦 Parent</span>
+        <h3>Le parent se connecte de son côté</h3>
+        <p>Le parent peut également se connecter avec ses propres identifiants pour suivre la scolarité de son enfant : notes, absences, bulletins. Il reçoit également les notifications par email (absences, etc.).</p>
+      </div>
+
+    </div>
+
+    <div class="success-box" style="margin-top: 2rem;">
+      <strong>🎯 Bénéfice clé pour l'administration :</strong> 
+      ce qui prenait auparavant <strong>plusieurs dizaines de minutes</strong> (création manuelle des comptes, saisie des informations, envoi des identifiants) se fait maintenant en <strong>2 clics et moins de 2 minutes</strong>.
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 3 : RÉCAPITULATIF -->
+    <!-- ============================================================ -->
+    <h2 class="section-title">📊 Récapitulatif : qui fait quoi ?</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Tâche</th>
+          <th>Élève</th>
+          <th>Parent</th>
+          <th>Professeur</th>
+          <th>Admin</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Pré-inscription</td>
+          <td>—</td>
+          <td>✅</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Validation de l'inscription</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td>Création des comptes</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>✅ (automatique)</td>
+        </tr>
+        <tr>
+          <td>Consultation des notes</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>✅ (saisie)</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td>Appel / Absences</td>
+          <td>—</td>
+          <td>✅ (consultation)</td>
+          <td>✅ (saisie)</td>
+          <td>✅ (consultation)</td>
+        </tr>
+        <tr>
+          <td>Gestion de la comptabilité</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td>Configuration de l'école</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>✅ (SUPER_ADMIN)</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+
+  <footer>
+    ÉcoleApp — Rôles et parcours d'inscription · Fait avec ❤️
+  </footer>
+
+</body>
+</html>

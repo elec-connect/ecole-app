@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 type Matiere = { id: string; nom: string; coefficient: number };
 
@@ -16,6 +17,7 @@ type EtudiantMoyenne = {
 interface Props {
   matieres: Matiere[];
   etudiants: EtudiantMoyenne[];
+  classeId: string; // ⭐ NOUVEAU
 }
 
 function couleur(m: number | null): string {
@@ -29,7 +31,7 @@ function couleur(m: number | null): string {
 
 type Tri = 'nom' | 'moyenne' | 'classe';
 
-export function MoyennesTable({ matieres, etudiants }: Props) {
+export function MoyennesTable({ matieres, etudiants, classeId }: Props) {
   const [tri, setTri] = useState<Tri>('moyenne');
   const [recherche, setRecherche] = useState('');
 
@@ -130,12 +132,15 @@ export function MoyennesTable({ matieres, etudiants }: Props) {
               <th className="text-center px-4 py-3 text-xs font-semibold text-blue-700 uppercase bg-blue-50">
                 Moyenne
               </th>
+              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 uppercase">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {etudiantsTries.length === 0 ? (
               <tr>
-                <td colSpan={matieres.length + 2} className="text-center py-8 text-gray-400 text-sm">
+                <td colSpan={matieres.length + 3} className="text-center py-8 text-gray-400 text-sm">
                   Aucun élève
                 </td>
               </tr>
@@ -172,6 +177,15 @@ export function MoyennesTable({ matieres, etudiants }: Props) {
                     <span className={couleur(et.moyenneGenerale) + ' text-lg'}>
                       {et.moyenneGenerale !== null ? et.moyenneGenerale.toFixed(2) + '/20' : '—'}
                     </span>
+                  </td>
+                  <td className="px-3 py-3 text-sm text-center">
+                    {/* ⭐ NOUVEAU : Bouton d'édition des notes pour cet élève */}
+                    <Link
+                      href={`/admin/moyennes/${classeId}/${et.id}`}
+                      className="inline-block bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition"
+                    >
+                      ✏️ Éditer
+                    </Link>
                   </td>
                 </tr>
               ))

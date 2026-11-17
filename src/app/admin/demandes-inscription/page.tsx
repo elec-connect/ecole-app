@@ -9,6 +9,14 @@ import { Resend } from 'resend';
 export const dynamic = 'force-dynamic';
 
 const NIVEAUX_LABELS: Record<string, string> = {
+  // Primaire
+  '1ere_primaire': '1ère année primaire',
+  '2eme_primaire': '2ème année primaire',
+  '3eme_primaire': '3ème année primaire',
+  '4eme_primaire': '4ème année primaire',
+  '5eme_primaire': '5ème année primaire',
+  '6eme_primaire': '6ème année primaire',
+  // Secondaire
   '7eme': '7ème année',
   '8eme': '8ème année',
   '9eme': '9ème année',
@@ -17,6 +25,9 @@ const NIVEAUX_LABELS: Record<string, string> = {
   '3eme': '3ème année secondaire',
   '4eme': '4ème année secondaire',
 };
+
+// Capacité maximale par classe
+const CAPACITE_MAX = 30;
 
 async function approuver(id: string) {
   'use server';
@@ -38,24 +49,37 @@ async function approuver(id: string) {
     redirect('/admin/demandes-inscription?erreur=annee-manquante');
   }
 
-  // Trouver la classe correspondante
-  let classe = await db.classe.findFirst({
-    where: { niveau: demande.niveauDemande, anneeScolaire },
-    orderBy: { nom: 'asc' },
+  // ============================================================
+  // ⭐ LOGIQUE DE REMPLISSAGE SÉQUENTIEL (A, puis B, puis C...)
+  // ============================================================
+  
+  // 1. Récupérer toutes les classes de ce niveau pour cette année
+  const classesDuNiveau = await db.classe.findMany({
+    where: { 
+      niveau: demande.niveauDemande, 
+      anneeScolaire 
+    },
+    include: {
+      _count: { select: { inscriptions: true } },
+    },
+    orderBy: { nom: 'asc' }, // A, B, C, D, E...
   });
 
-  if (!classe) {
-    classe = await db.classe.findFirst({
-      where: { niveau: demande.niveauDemande },
-      orderBy: { nom: 'asc' },
-    });
-  }
-
-  if (!classe) {
+  if (classesDuNiveau.length === 0) {
     redirect('/admin/demandes-inscription?erreur=niveau-introuvable');
   }
 
-  // Générer les mots de passe temporaires
+  // 2. Trouver la première classe qui n'est PAS pleine (< 30 élèves)
+  const classe = classesDuNiveau.find(c => c._count.inscriptions < CAPACITE_MAX);
+
+  // 3. Si toutes les classes sont pleines, on bloque avec un message
+  if (!classe) {
+    redirect('/admin/demandes-inscription?erreur=classes-pleines');
+  }
+
+  // ============================================================
+  // GÉNÉRATION DES IDENTIFIANTS
+  // ============================================================
   const mdpEleve = Math.random().toString(36).slice(-8) + 'A1!';
   const mdpParent = Math.random().toString(36).slice(-8) + 'A1!';
   const hashEleve = await bcrypt.hash(mdpEleve, 10);
@@ -79,6 +103,12 @@ async function approuver(id: string) {
             actif: true,
           },
         });
+      } else {
+        // Réactiver le parent s'il existait déjà
+        parent = await tx.user.update({
+          where: { id: parent.id },
+          data: { actif: true },
+        });
       }
 
       // 2. Gérer l'élève (création ou récupération)
@@ -99,7 +129,7 @@ async function approuver(id: string) {
           },
         });
       } else {
-        // L'élève existe déjà → on met à jour ses infos (nom, prénom, emailParent)
+        // Réactiver l'élève s'il existait déjà
         etudiant = await tx.user.update({
           where: { id: etudiant.id },
           data: {
@@ -128,12 +158,12 @@ async function approuver(id: string) {
         });
       }
 
-      // 4. Inscrire l'élève dans la classe (si pas déjà fait)
+      // 4. Inscrire l'élève dans la classe trouvée
       const inscriptionExistante = await tx.inscription.findFirst({
         where: {
           etudiantId: etudiant.id,
-          classeId: classe!.id,
-          anneeScolaire: classe!.anneeScolaire,
+          classeId: classe.id,
+          anneeScolaire: classe.anneeScolaire,
         },
       });
 
@@ -141,8 +171,8 @@ async function approuver(id: string) {
         await tx.inscription.create({
           data: {
             etudiantId: etudiant.id,
-            classeId: classe!.id,
-            anneeScolaire: classe!.anneeScolaire,
+            classeId: classe.id,
+            anneeScolaire: classe.anneeScolaire,
           },
         });
       }
@@ -169,7 +199,7 @@ async function approuver(id: string) {
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Inscription validée !</h2>
-              <p>Le compte de <strong>${demande.prenom} ${demande.nom}</strong> a été traité.</p>
+              <p>Le compte de <strong>${demande.prenom} ${demande.nom}</strong> a été créé et inscrit en <strong>${classe.nom}</strong>.</p>
 
               <h3>👦 Élève</h3>
               <p><strong>Email :</strong> ${demande.emailEleve}<br/>
@@ -250,6 +280,15 @@ export default async function AdminDemandesInscriptionPage({
           ❌ Aucune classe n&apos;existe pour ce niveau dans votre base. Créez d&apos;abord une classe dans{' '}
           <a href="/admin/classes" className="underline font-medium">/admin/classes</a>{' '}
           avec le niveau correspondant, puis réessayez.
+        </div>
+      )}
+
+      {params.erreur === 'classes-pleines' && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+          ❌ Toutes les classes de ce niveau sont pleines (30 élèves maximum par classe). 
+          Créez une nouvelle classe dans{' '}
+          <a href="/admin/classes" className="underline font-medium">/admin/classes</a>{' '}
+          avant de continuer.
         </div>
       )}
 

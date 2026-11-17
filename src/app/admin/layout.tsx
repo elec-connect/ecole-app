@@ -42,15 +42,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const user = await db.user.findUnique({ where: { id: session.id } });
   const config = await getConfig();
 
+  // ⭐ Compter les demandes d'inscription en attente
+  const nbDemandesEnAttente = await db.demandeInscription.count({
+    where: { statut: 'EN_ATTENTE' },
+  });
+
   // ⭐ Les liens SUPER_ADMIN ne sont visibles que par le SUPER_ADMIN
   const items =
     session.role === 'SUPER_ADMIN'
       ? [...ITEMS_BASE, ...ITEMS_SUPER_ADMIN]
       : ITEMS_BASE;
 
+  // ⭐ Ajouter le badge sur l'item "Demandes d'inscription"
+  const itemsAvecBadge = items.map((item) =>
+    item.href === '/admin/demandes-inscription'
+      ? { ...item, badge: nbDemandesEnAttente }
+      : item
+  );
+
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar items={items} titre="Espace Admin" logoUrl={config.logoUrl} />
+      <Sidebar items={itemsAvecBadge} titre="Espace Admin" logoUrl={config.logoUrl} />
       <div className="flex-1 flex flex-col">
         <Header
           nomUtilisateur={user ? user.prenom + ' ' + user.nom : undefined}

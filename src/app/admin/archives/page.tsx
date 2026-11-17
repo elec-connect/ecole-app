@@ -561,15 +561,23 @@ export default function ArchivesPage() {
                     </span>
                   </div>
                   <div className="flex gap-2">
+                    {/* Bouton JSON existant */}
                     <a
                       href={'/api/archives/telecharger?id=' + a.id}
                       className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
-                      📥 Télécharger
+                      📥 Télécharger JSON
+                    </a>
+                    {/* ⭐ Nouveau bouton PDF */}
+                    <a
+                      href={'/api/archives/pdf/' + a.id}
+                      className="px-3 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      📄 Télécharger PDF
                     </a>
                     <button
                       onClick={() => supprimerArchive(a.id)}
-                      className="px-3 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                      className="px-3 py-1.5 text-xs bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
                     >
                       Suppr.
                     </button>

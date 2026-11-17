@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getConfig } from '@/lib/config';
+import { getPrismaDynamic } from '@/lib/prisma-dynamic';
 import { ReinitialisationClient } from './ReinitialisationClient';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,25 @@ export default async function ReinitialisationPage() {
   }
 
   const config = await getConfig();
-  const anneeActuelle = config.anneeScolaireCourante ?? 'Non configurée';
+  const anneeCourante = config.anneeScolaireCourante ?? 'Non configurée';
+  const db = await getPrismaDynamic();
+
+  // Récupérer les années disponibles
+  const classesAnnees = await db.classe.findMany({
+    select: { anneeScolaire: true },
+    distinct: ['anneeScolaire'],
+  });
+  const inscriptionsAnnees = await db.inscription.findMany({
+    select: { anneeScolaire: true },
+    distinct: ['anneeScolaire'],
+  });
+  
+  const anneesSet = new Set([
+    ...classesAnnees.map(c => c.anneeScolaire),
+    ...inscriptionsAnnees.map(i => i.anneeScolaire),
+    anneeCourante
+  ]);
+  const anneesDisponibles = Array.from(anneesSet).filter(a => a !== 'Non configurée').sort().reverse();
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -27,36 +46,21 @@ export default async function ReinitialisationPage() {
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
         <h2 className="font-semibold text-lg">📅 Année scolaire en cours</h2>
-        <p className="text-2xl font-bold text-blue-700">{anneeActuelle}</p>
-        <p className="text-sm text-gray-600">
-          Cette action va :
-        </p>
-        <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-          <li>Créer une archive complète (classes, élèves, cours, professeurs, notes)</li>
-          <li>Supprimer toutes les classes de l'année {anneeActuelle}</li>
-          <li>Supprimer tous les emplois du temps de l'année {anneeActuelle}</li>
-          <li>Supprimer toutes les inscriptions (élèves ↔ classes) de l'année {anneeActuelle}</li>
-          <li>Supprimer toutes les notes et présences liées</li>
-          <li>Désactiver les comptes professeurs (ils restent en base mais ne peuvent plus se connecter)</li>
-        </ul>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-          <p className="font-medium">⚠️ Important</p>
-          <p>
-            Les données seront conservées dans la section <strong>Archives</strong> sous forme
-            de fichier JSON. Vous pourrez les restaurer manuellement si besoin.
-          </p>
-        </div>
+        <p className="text-2xl font-bold text-blue-700">{anneeCourante}</p>
+        
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
-          <p className="font-medium">🔴 Action irréversible</p>
+          <p className="font-medium">🔴 Attention</p>
           <p>
-            Après suppression, vous devrez recréer les classes, matières, salles,
-            utilisateurs et emplois du temps pour la nouvelle année. Faites une
-            sauvegarde manuelle de la base Neon avant de continuer.
+            La réinitialisation supprime définitivement les données de l'année sélectionnée. 
+            Assurez-vous d'avoir une sauvegarde.
           </p>
         </div>
-      </div>
 
-      <ReinitialisationClient anneeActuelle={anneeActuelle} />
+        <ReinitialisationClient 
+          anneesDisponibles={anneesDisponibles} 
+          anneeCourante={anneeCourante} 
+        />
+      </div>
     </div>
   );
 }

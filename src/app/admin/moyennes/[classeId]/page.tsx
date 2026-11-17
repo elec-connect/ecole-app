@@ -114,6 +114,7 @@ export default async function MoyennesClassePage({
       <MoyennesTable
         matieres={JSON.parse(JSON.stringify(matieres))}
         etudiants={JSON.parse(JSON.stringify(etudiantsAvecMoyennes))}
+        classeId={classeId} // ⭐ NOUVEAU
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">

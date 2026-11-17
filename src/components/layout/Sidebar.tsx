@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
-type Item = { href: string; label: string; icon: string };
+type Item = {
+  href: string;
+  label: string;
+  icon: string;
+  badge?: number; // ⭐ NOUVEAU : pour afficher le compteur
+};
 
 interface Props {
   items: Item[];
@@ -40,7 +45,14 @@ export function Sidebar({ items, titre, logoUrl }: Props) {
               )}
             >
               <span>{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              
+              {/* ⭐ Badge de notification */}
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              )}
             </Link>
           );
         })}

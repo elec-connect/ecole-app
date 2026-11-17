@@ -12,7 +12,11 @@ const schema = z.object({
   nomParent: z.string().min(2, 'Nom du parent requis'),
   prenomParent: z.string().min(2, 'Prénom du parent requis'),
   telephone: z.string().optional().or(z.literal('')),
-  niveauDemande: z.enum(['7eme', '8eme', '9eme', '1ere', '2eme', '3eme', '4eme']),
+  niveauDemande: z.enum([
+  '1ere_primaire', '2eme_primaire', '3eme_primaire', '4eme_primaire', '5eme_primaire', '6eme_primaire',
+  '7eme', '8eme', '9eme',
+  '1ere', '2eme', '3eme', '4eme',
+]),
 });
 
 export async function POST(req: Request) {
@@ -90,14 +94,22 @@ export async function POST(req: Request) {
         
         const niveauLabel =
           {
-            '7eme': '7ème année',
-            '8eme': '8ème année',
-            '9eme': '9ème année',
-            '1ere': '1ère année secondaire',
-            '2eme': '2ème année secondaire',
-            '3eme': '3ème année secondaire',
-            '4eme': '4ème année secondaire',
-          }[parsed.data.niveauDemande] ?? parsed.data.niveauDemande;
+             // Primaire
+  '1ere_primaire': '1ère année primaire',
+  '2eme_primaire': '2ème année primaire',
+  '3eme_primaire': '3ème année primaire',
+  '4eme_primaire': '4ème année primaire',
+  '5eme_primaire': '5ème année primaire',
+  '6eme_primaire': '6ème année primaire',
+  // Secondaire
+  '7eme': '7ème année',
+  '8eme': '8ème année',
+  '9eme': '9ème année',
+  '1ere': '1ère année secondaire',
+  '2eme': '2ème année secondaire',
+  '3eme': '3ème année secondaire',
+  '4eme': '4ème année secondaire',
+}[parsed.data.niveauDemande] ?? parsed.data.niveauDemande;
 
         await resend.emails.send({
           from: config.emailFrom,

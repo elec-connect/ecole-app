@@ -91,12 +91,13 @@ model User {
   parents        ParentEleve[] @relation("Eleve")
 
   // Relations supplémentaires
-  demandesInscription DemandeInscription[] @relation("DemandeInscriptionEtudiant")
-  notifications       Notification[]       @relation("NotificationDestinataire")
-  fraisScolarite      FraisScolarite[]     @relation("FraisEleve")
-  tarifsProfesseur    TarifProfesseur[]    @relation("TarifProf")
-  seancesDeclarees    SeanceTravail[]      @relation("SeancesProf")
-  seancesTraitees     SeanceTravail[]      @relation("SeancesTraitees")
+  demandesInscriptionEtudiant DemandeInscription[] @relation("DemandeInscriptionEtudiant")
+  demandesInscriptionParent   DemandeInscription[] @relation("DemandeInscriptionParent")
+  notifications               Notification[]       @relation("NotificationDestinataire")
+  fraisScolarite              FraisScolarite[]     @relation("FraisEleve")
+  tarifsProfesseur            TarifProfesseur[]    @relation("TarifProf")
+  seancesDeclarees            SeanceTravail[]      @relation("SeancesProf")
+  seancesTraitees             SeanceTravail[]      @relation("SeancesTraitees")
 }
 
 model ParentEleve {
@@ -279,12 +280,14 @@ model Archive {
   createdById String?
 }
 
-// Demandes de pré-inscription (formulaire public)
 model DemandeInscription {
   id               String        @id @default(cuid())
-  nom              String
-  prenom           String
-  emailParent      String
+  nom              String        // Nom de l'élève
+  prenom           String        // Prénom de l'élève
+  emailEleve       String        // Email de l'élève
+  emailParent      String        // Email du parent
+  nomParent        String        // Nom du parent
+  prenomParent     String        // Prénom du parent
   telephone        String?
   niveauDemande    String        // "7eme", "8eme", "9eme", "1ere", "2eme", "3eme", "4eme"
   statut           StatutDemande @default(EN_ATTENTE)
@@ -294,9 +297,11 @@ model DemandeInscription {
 
   etudiantId       String?
   etudiant         User?         @relation("DemandeInscriptionEtudiant", fields: [etudiantId], references: [id])
+
+  parentId         String?
+  parent           User?         @relation("DemandeInscriptionParent", fields: [parentId], references: [id])
 }
 
-// Notifications admin (cloche + badge)
 model Notification {
   id             String   @id @default(cuid())
   type           String

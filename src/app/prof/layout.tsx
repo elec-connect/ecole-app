@@ -10,6 +10,7 @@ const ITEMS = [
   { href: '/prof/appel', label: "Faire l'appel", icon: '✅' }, 
   { href: '/prof/notes', label: 'Saisir des notes', icon: '📝' },
   { href: '/prof/devoirs', label: 'Devoirs', icon: '📚' },
+  { href: '/prof/seances', label: 'Mes séances', icon: '🕒' },
 ];
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
