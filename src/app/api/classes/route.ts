@@ -2,15 +2,17 @@ import { NextResponse } from 'next/server';
 import { getPrismaDynamic } from '@/lib/prisma-dynamic';
 import { withAuth, withAdmin } from '@/lib/api-helpers';
 
-// ⭐ GET : autorise tous les utilisateurs connectés (avecAuth)
-// pour que la page /admin/utilisateurs puisse charger la liste des classes
 export const GET = withAuth(async (req) => {
   const { searchParams } = new URL(req.url);
   const anneeScolaire = searchParams.get('anneeScolaire');
+  const avecEleves = searchParams.get('avecEleves') === 'true'; // ⭐ Nouveau
 
   const db = await getPrismaDynamic();
   const classes = await db.classe.findMany({
-    where: anneeScolaire ? { anneeScolaire } : {},
+    where: {
+      ...(anneeScolaire ? { anneeScolaire } : {}),
+      ...(avecEleves ? { inscriptions: { some: {} } } : {}), // ⭐ Filtre
+    },
     include: {
       professeurPrincipal: { select: { id: true, nom: true, prenom: true } },
       _count: { select: { inscriptions: true, cours: true } },

@@ -12,7 +12,10 @@ export default function GenererEmploiPage() {
   const [resultat, setResultat] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/classes').then((r) => r.json()).then(setClasses);
+    // ⭐ On ne récupère que les classes avec au moins un élève
+    fetch('/api/classes?avecEleves=true')
+      .then((r) => r.json())
+      .then(setClasses);
   }, []);
 
   function toggleClasse(id: string) {
@@ -49,18 +52,27 @@ export default function GenererEmploiPage() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Classes à générer ({selection.length} sélectionnée{selection.length > 1 ? 's' : ''})
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {classes.map((c) => {
-              const selected = selection.includes(c.id);
-              return (
-                <label key={c.id} className={'flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition text-sm ' + (selected ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100')}>
-                  <input type="checkbox" checked={selected} onChange={() => toggleClasse(c.id)} />
-                  <span className="font-medium">{c.nom}</span>
-                  <span className={'text-xs ' + (selected ? 'text-blue-100' : 'text-gray-400')}>({c.niveau})</span>
-                </label>
-              );
-            })}
-          </div>
+          
+          {classes.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-6">
+              Aucune classe avec des élèves.
+              <br />
+              <span className="text-xs">Les emplois du temps ne peuvent être générés que pour les classes qui contiennent au moins un élève.</span>
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {classes.map((c) => {
+                const selected = selection.includes(c.id);
+                return (
+                  <label key={c.id} className={'flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition text-sm ' + (selected ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100')}>
+                    <input type="checkbox" checked={selected} onChange={() => toggleClasse(c.id)} />
+                    <span className="font-medium">{c.nom}</span>
+                    <span className={'text-xs ' + (selected ? 'text-blue-100' : 'text-gray-400')}>({c.niveau})</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <label className="flex items-center gap-2 cursor-pointer">
