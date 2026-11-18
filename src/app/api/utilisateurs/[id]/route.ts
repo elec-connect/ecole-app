@@ -3,10 +3,14 @@ import { getPrismaDynamic } from '@/lib/prisma-dynamic';
 import { withSuperAdmin, withAdminOrSuper } from '@/lib/api-helpers';
 import bcrypt from 'bcryptjs';
 
+// ⭐ Email du Super Admin propriétaire
+const EMAIL_PROPRIETAIRE = 'haouala18@gmail.com';
+
 // GET : Admin et Super Admin peuvent voir
-export const GET = withAdminOrSuper(async (_req, _session, ctx) => {
+export const GET = withAdminOrSuper(async (_req, session, ctx) => {
   const { id } = await ctx.params;
   const db = await getPrismaDynamic();
+  
   const user = await db.user.findUnique({
     where: { id },
     select: {
@@ -30,7 +34,14 @@ export const GET = withAdminOrSuper(async (_req, _session, ctx) => {
       },
     },
   });
+
   if (!user) return NextResponse.json({ erreur: 'Introuvable' }, { status: 404 });
+
+  // ⭐ Un admin (non propriétaire) ne peut pas voir le compte propriétaire
+  if (user.email === EMAIL_PROPRIETAIRE && session.email !== EMAIL_PROPRIETAIRE) {
+    return NextResponse.json({ erreur: 'Introuvable' }, { status: 404 });
+  }
+
   return NextResponse.json(user);
 });
 
@@ -40,10 +51,23 @@ export const PUT = withAdminOrSuper(async (req, session, ctx) => {
   const body = await req.json();
   const db = await getPrismaDynamic();
 
+  // ⭐ Récupérer la cible
+  const cible = await db.user.findUnique({ where: { id } });
+  if (!cible) {
+    return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 });
+  }
+
+  // ⭐ Protection : seul le propriétaire peut modifier son propre compte
+  if (cible.email === EMAIL_PROPRIETAIRE && session.email !== EMAIL_PROPRIETAIRE) {
+    return NextResponse.json(
+      { erreur: 'Action non autorisée sur ce compte.' },
+      { status: 403 }
+    );
+  }
+
   // ⭐ Sécurité : si c'est un ADMIN, il ne peut éditer QUE les élèves et les parents
   if (session.role === 'ADMIN') {
-    const cible = await db.user.findUnique({ where: { id } });
-    if (!cible || (cible.role !== 'ETUDIANT' && cible.role !== 'PARENT')) {
+    if (cible.role !== 'ETUDIANT' && cible.role !== 'PARENT') {
       return NextResponse.json(
         { erreur: 'Un administrateur ne peut éditer que les élèves ou les parents.' },
         { status: 403 }
@@ -125,6 +149,7 @@ export const PUT = withAdminOrSuper(async (req, session, ctx) => {
 // DELETE : UNIQUEMENT Super Admin
 export const DELETE = withSuperAdmin(async (_req, session, ctx) => {
   const { id } = await ctx.params;
+  
   if (id === session.id) {
     return NextResponse.json(
       { erreur: 'Impossible de supprimer votre propre compte' },
@@ -133,6 +158,20 @@ export const DELETE = withSuperAdmin(async (_req, session, ctx) => {
   }
 
   const db = await getPrismaDynamic();
+
+  // ⭐ Protection : le compte propriétaire ne peut pas être supprimé par un autre
+  const cible = await db.user.findUnique({ where: { id } });
+  if (!cible) {
+    return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 });
+  }
+
+  if (cible.email === EMAIL_PROPRIETAIRE && session.email !== EMAIL_PROPRIETAIRE) {
+    return NextResponse.json(
+      { erreur: 'Impossible de supprimer ce compte.' },
+      { status: 403 }
+    );
+  }
+
   try {
     await db.user.delete({ where: { id } });
     return NextResponse.json({ ok: true });

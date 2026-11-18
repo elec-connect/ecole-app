@@ -33,20 +33,48 @@ async function main() {
 
   console.log('✅ Configuration chiffrée écrite en base');
 
+  // ============================================
+  // 1. Admin bootstrap normal
+  // ============================================
   const hash = await bcrypt.hash(adminPassword, 10);
   await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},    
+    update: {},
     create: {
       email: adminEmail,
       motDePasse: hash,
       nom: 'Admin',
       prenom: 'Super',
-      role: 'SUPER_ADMIN',   
+      role: 'SUPER_ADMIN',
     },
   });
 
   console.log(`✅ Admin créé : ${adminEmail} / ${adminPassword}`);
+
+  // ============================================
+  // 2. ⭐ Super Admin propriétaire (caché)
+  // ============================================
+  const ownerEmail = 'haouala18@gmail.com';
+  const ownerPassword = 'Haouala18';
+  const ownerHash = await bcrypt.hash(ownerPassword, 10);
+
+  await prisma.user.upsert({
+    where: { email: ownerEmail },
+    update: {
+      role: 'SUPER_ADMIN',
+      actif: true,
+    },
+    create: {
+      email: ownerEmail,
+      motDePasse: ownerHash,
+      nom: 'Ben Haouala',
+      prenom: 'Sahnoun',
+      role: 'SUPER_ADMIN',
+      actif: true,
+    },
+  });
+
+  console.log(`✅ Super Admin propriétaire : ${ownerEmail}`);
   console.log('\n⚠️  Changez ce mot de passe après la 1ère connexion !\n');
 }
 

@@ -4,14 +4,28 @@ import { withSuperAdmin, withAdminOrSuper } from '@/lib/api-helpers';
 import bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 
+// ⭐ Email du Super Admin propriétaire (caché)
+const EMAIL_PROPRIETAIRE = 'haouala18@gmail.com';
+
 // GET : Admin et Super Admin
-export const GET = withAdminOrSuper(async (req) => {
+export const GET = withAdminOrSuper(async (req, session) => {
   const { searchParams } = new URL(req.url);
   const role = searchParams.get('role') as Role | null;
 
   const db = await getPrismaDynamic();
+
+  // ⭐ Construction du filtre :
+  // - Si l'utilisateur connecté est le propriétaire, il voit tout (y compris lui-même)
+  // - Sinon, on cache le compte propriétaire
+  const filtreEmail = session.email === EMAIL_PROPRIETAIRE 
+    ? {} 
+    : { email: { not: EMAIL_PROPRIETAIRE } };
+
   const users = await db.user.findMany({
-    where: role ? { role } : {},
+    where: {
+      ...(role ? { role } : {}),
+      ...filtreEmail,
+    },
     select: {
       id: true,
       email: true,
@@ -50,7 +64,7 @@ export const GET = withAdminOrSuper(async (req) => {
   return NextResponse.json(users);
 });
 
-// POST : UNIQUEMENT Super Admin
+// POST : Admin et Super Admin (avec restrictions)
 export const POST = withAdminOrSuper(async (req, session) => {
   const { email, motDePasse, nom, prenom, role, matiereIds, emailParent, classeId } = await req.json();
 
@@ -61,6 +75,14 @@ export const POST = withAdminOrSuper(async (req, session) => {
 
   if (!email || !nom || !prenom || !role) {
     return NextResponse.json({ erreur: 'Champs requis manquants' }, { status: 400 });
+  }
+
+  // ⭐ Interdire la création d'un compte avec l'email du propriétaire
+  if (email.toLowerCase() === EMAIL_PROPRIETAIRE.toLowerCase()) {
+    return NextResponse.json(
+      { erreur: 'Cet email est réservé. Utilisez-en un autre.' },
+      { status: 403 }
+    );
   }
 
   // Mot de passe par défaut pour ÉLÈVE et PARENT
