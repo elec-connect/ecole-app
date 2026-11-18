@@ -36,6 +36,24 @@ const ROLE_COLOR: Record<Role, string> = {
   PARENT: 'bg-purple-100 text-purple-700',
 };
 
+const TOUS_LES_NIVEAUX = [
+  { value: '1ere_primaire', label: '1ère primaire' },
+  { value: '2eme_primaire', label: '2ème primaire' },
+  { value: '3eme_primaire', label: '3ème primaire' },
+  { value: '4eme_primaire', label: '4ème primaire' },
+  { value: '5eme_primaire', label: '5ème primaire' },
+  { value: '6eme_primaire', label: '6ème primaire' },
+  { value: '7eme', label: '7ème' },
+  { value: '8eme', label: '8ème' },
+  { value: '9eme', label: '9ème' },
+  { value: '1ere', label: '1ère' },
+  { value: '2eme', label: '2ème' },
+  { value: '3eme', label: '3ème' },
+  { value: '4eme', label: '4ème' },
+];
+
+const TOUTES_LES_SECTIONS = ['A', 'B', 'C', 'D', 'E'];
+
 const EMPTY_FORM = {
   id: '',
   email: '',
@@ -47,6 +65,7 @@ const EMPTY_FORM = {
   matiereIds: [] as string[],
   emailParent: '',
   classeId: '',
+  niveauSelectionne: '',
 };
 
 export default function UtilisateursPage() {
@@ -66,6 +85,7 @@ export default function UtilisateursPage() {
   const [relations, setRelations] = useState<Record<string, string>>({});
 
   async function charger() {
+    setLoading(true);
     try {
       const [ru, rm, rc, re] = await Promise.all([
         fetch('/api/utilisateurs'),
@@ -74,10 +94,10 @@ export default function UtilisateursPage() {
         fetch('/api/utilisateurs?role=ETUDIANT'),
       ]);
 
-      const dataUsers = await ru.json();
-      const dataMatieres = await rm.json();
-      const dataClasses = await rc.json();
-      const dataEleves = await re.json();
+      const dataUsers = ru.ok ? await ru.json() : [];
+      const dataMatieres = rm.ok ? await rm.json() : [];
+      const dataClasses = rc.ok ? await rc.json() : [];
+      const dataEleves = re.ok ? await re.json() : [];
 
       setUsers(Array.isArray(dataUsers) ? dataUsers : []);
       setMatieres(Array.isArray(dataMatieres) ? dataMatieres : []);
@@ -85,10 +105,8 @@ export default function UtilisateursPage() {
       setEleves(Array.isArray(dataEleves) ? dataEleves : []);
     } catch (e) {
       console.error('Erreur chargement:', e);
-      setUsers([]);
-      setMatieres([]);
-      setClasses([]);
-      setEleves([]);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -128,6 +146,31 @@ export default function UtilisateursPage() {
       setEnfantsSelectionnes(enfantsAuto);
     }
   }, [form.role, form.email, eleves]);
+
+  // ⭐ Toutes les classes possibles (niveau × section), qu'elles existent ou non
+  const toutesLesClassesPossibles = useMemo(() => {
+    return TOUS_LES_NIVEAUX.flatMap((niveau) =>
+      TOUTES_LES_SECTIONS.map((section) => {
+        const nomClasse = `${niveau.label} ${section}`;
+        const classeExistante = classes.find(
+          (c) => c.niveau === niveau.value && c.nom === nomClasse
+        );
+        return {
+          id: classeExistante?.id || `new-${niveau.value}-${section}`,
+          nom: nomClasse,
+          niveau: niveau.value,
+          anneeScolaire: classeExistante?.anneeScolaire || '',
+          existe: !!classeExistante,
+        };
+      })
+    );
+  }, [classes]);
+
+  // ⭐ Classes filtrées pour le formulaire
+  const classesFiltrees = useMemo(() => {
+    if (!form.niveauSelectionne) return toutesLesClassesPossibles;
+    return toutesLesClassesPossibles.filter((c) => c.niveau === form.niveauSelectionne);
+  }, [toutesLesClassesPossibles, form.niveauSelectionne]);
 
   const filtres = useMemo(() => {
     return users.filter((u) => {
@@ -244,6 +287,7 @@ export default function UtilisateursPage() {
   }
 
   function editer(u: User) {
+    const inscriptionActuelle = u.inscriptions?.[0];
     setForm({
       id: u.id,
       email: u.email,
@@ -254,7 +298,8 @@ export default function UtilisateursPage() {
       role: u.role,
       matiereIds: u.matieres?.map((m) => m.id) ?? [],
       emailParent: u.emailParent ?? '',
-      classeId: u.inscriptions?.[0]?.classe?.id ?? '',
+      classeId: inscriptionActuelle?.classe?.id ?? '',
+      niveauSelectionne: inscriptionActuelle?.classe?.niveau ?? '',
     });
     setEnfantsSelectionnes([]);
     setRelations({});
@@ -291,7 +336,6 @@ export default function UtilisateursPage() {
     form.role === 'PARENT' && emailLower
       ? eleves.filter((e) => e.emailParent && e.emailParent.toLowerCase().trim() === emailLower)
       : eleves;
-  const enfantsAuto = emailLower ? elevesAffiches.length : 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -333,7 +377,6 @@ export default function UtilisateursPage() {
                 <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
               </div>
 
-              {/* Colonne 1 : Mot de passe + Confirmation empilés */}
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -377,13 +420,12 @@ export default function UtilisateursPage() {
                 </div>
               </div>
 
-              {/* Colonne 2 : Rôle */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
                 <select
                   value={form.role}
                   onChange={(e) =>
-                    setForm({ ...form, role: e.target.value as Role, matiereIds: [], emailParent: '', classeId: '' })
+                    setForm({ ...form, role: e.target.value as Role, matiereIds: [], emailParent: '', classeId: '', niveauSelectionne: '' })
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
@@ -405,15 +447,48 @@ export default function UtilisateursPage() {
               </div>
             </div>
 
+            {/* ⭐ Classe de l'élève : Niveau + Classe */}
             {form.role === 'ETUDIANT' && (
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-200 space-y-3">
-                <h3 className="text-sm font-semibold text-blue-900">🏫 Classe de l'élève</h3>
-                <select value={form.classeId} onChange={(e) => setForm({ ...form, classeId: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
-                  <option value="">— Aucune classe —</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nom} ({c.niveau}) — {c.anneeScolaire}</option>
-                  ))}
-                </select>
+                <h3 className="text-sm font-semibold text-blue-900">🏫 Classe de l&apos;élève</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Niveau</label>
+                    <select
+                      value={form.niveauSelectionne}
+                      onChange={(e) => setForm({ ...form, niveauSelectionne: e.target.value, classeId: '' })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="">— Tous les niveaux —</option>
+                      {TOUS_LES_NIVEAUX.map((n) => (
+                        <option key={n.value} value={n.value}>{n.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Classe</label>
+                    <select
+                      value={form.classeId}
+                      onChange={(e) => setForm({ ...form, classeId: e.target.value })}
+                      disabled={!form.niveauSelectionne}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white disabled:opacity-50"
+                    >
+                      <option value="">— Aucune —</option>
+                      {classesFiltrees.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nom}{!c.existe ? ' (à créer)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {form.niveauSelectionne && classesFiltrees.length === 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                    ⚠️ Aucune classe n&apos;existe pour ce niveau. 
+                    <a href="/admin/classes" className="underline font-medium ml-1">Créez-en une dans /admin/classes</a> 
+                    avant d&apos;affecter un élève.
+                  </div>
+                )}
               </div>
             )}
 
