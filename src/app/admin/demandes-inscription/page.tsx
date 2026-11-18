@@ -26,8 +26,25 @@ const NIVEAUX_LABELS: Record<string, string> = {
   '4eme': '4ème année secondaire',
 };
 
-// Capacité maximale par classe
+// Petit label (sans "année") pour construire le nom de la classe
+const NIVEAUX_COURTS: Record<string, string> = {
+  '1ere_primaire': '1ère primaire',
+  '2eme_primaire': '2ème primaire',
+  '3eme_primaire': '3ème primaire',
+  '4eme_primaire': '4ème primaire',
+  '5eme_primaire': '5ème primaire',
+  '6eme_primaire': '6ème primaire',
+  '7eme': '7ème',
+  '8eme': '8ème',
+  '9eme': '9ème',
+  '1ere': '1ère',
+  '2eme': '2ème',
+  '3eme': '3ème',
+  '4eme': '4ème',
+};
+
 const CAPACITE_MAX = 30;
+const SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'];
 
 async function approuver(id: string) {
   'use server';
@@ -51,10 +68,10 @@ async function approuver(id: string) {
   }
 
   // ============================================================
-  // ⭐ LOGIQUE DE REMPLISSAGE SÉQUENTIEL (A, puis B, puis C...)
+  // ⭐ TROUVER OU CRÉER LA CLASSE
   // ============================================================
   
-  // 1. Récupérer toutes les classes de ce niveau pour cette année
+  // 1. Récupérer toutes les classes existantes pour ce niveau
   const classesDuNiveau = await db.classe.findMany({
     where: { 
       niveau: demande.niveauDemande, 
@@ -66,16 +83,49 @@ async function approuver(id: string) {
     orderBy: { nom: 'asc' }, // A, B, C, D, E...
   });
 
+  let classe;
+
   if (classesDuNiveau.length === 0) {
-    redirect('/admin/demandes-inscription?erreur=niveau-introuvable');
-  }
+    // ⭐ Aucune classe n'existe → créer la section A automatiquement
+    const niveauCourt = NIVEAUX_COURTS[demande.niveauDemande] ?? demande.niveauDemande;
+    classe = await db.classe.create({
+      data: {
+        nom: `${niveauCourt} A`,
+        niveau: demande.niveauDemande,
+        anneeScolaire,
+      },
+      include: { _count: { select: { inscriptions: true } } },
+    });
+    console.log(`[APPROBATION] Classe créée automatiquement : ${classe.nom}`);
+  } else {
+    // 2. Chercher la première classe qui n'est pas pleine
+    classe = classesDuNiveau.find(c => c._count.inscriptions < CAPACITE_MAX);
 
-  // 2. Trouver la première classe qui n'est PAS pleine (< 30 élèves)
-  const classe = classesDuNiveau.find(c => c._count.inscriptions < CAPACITE_MAX);
+    // 3. Si toutes les classes sont pleines → créer une nouvelle section
+    if (!classe) {
+      const sectionsUtilisees = classesDuNiveau.map(c => {
+        const parts = c.nom.split(' ');
+        return parts[parts.length - 1]; // Dernière partie = la section (A, B, C...)
+      });
 
-  // 3. Si toutes les classes sont pleines, on bloque avec un message
-  if (!classe) {
-    redirect('/admin/demandes-inscription?erreur=classes-pleines');
+      // Trouver la première section libre
+      const sectionLibre = SECTIONS.find(s => !sectionsUtilisees.includes(s));
+
+      if (!sectionLibre) {
+        redirect('/admin/demandes-inscription?erreur=classes-pleines');
+      }
+
+      const niveauCourt = NIVEAUX_COURTS[demande.niveauDemande] ?? demande.niveauDemande;
+      classe = await db.classe.create({
+        data: {
+          nom: `${niveauCourt} ${sectionLibre}`,
+          niveau: demande.niveauDemande,
+          anneeScolaire,
+        },
+        include: { _count: { select: { inscriptions: true } } },
+      });
+      console.log(`[APPROBATION] Nouvelle section créée automatiquement : ${classe.nom}`);
+    }
   }
 
   // ============================================================
@@ -88,7 +138,7 @@ async function approuver(id: string) {
 
   try {
     await db.$transaction(async (tx) => {
-      // 1. Gérer le parent (création ou récupération)
+      // 1. Gérer le parent
       let parent = await tx.user.findUnique({
         where: { email: demande.emailParent },
       });
@@ -105,14 +155,13 @@ async function approuver(id: string) {
           },
         });
       } else {
-        // Réactiver le parent s'il existait déjà
         parent = await tx.user.update({
           where: { id: parent.id },
           data: { actif: true },
         });
       }
 
-      // 2. Gérer l'élève (création ou récupération)
+      // 2. Gérer l'élève
       let etudiant = await tx.user.findUnique({
         where: { email: demande.emailEleve },
       });
@@ -130,7 +179,6 @@ async function approuver(id: string) {
           },
         });
       } else {
-        // Réactiver l'élève s'il existait déjà
         etudiant = await tx.user.update({
           where: { id: etudiant.id },
           data: {
@@ -142,7 +190,7 @@ async function approuver(id: string) {
         });
       }
 
-      // 3. Lier le parent à l'élève (si pas déjà fait)
+      // 3. Lier le parent à l'élève
       const lienExistant = await tx.parentEleve.findUnique({
         where: {
           parentId_eleveId: { parentId: parent.id, eleveId: etudiant.id },
@@ -159,12 +207,12 @@ async function approuver(id: string) {
         });
       }
 
-      // 4. Inscrire l'élève dans la classe trouvée
+      // 4. Inscrire l'élève
       const inscriptionExistante = await tx.inscription.findFirst({
         where: {
           etudiantId: etudiant.id,
-          classeId: classe.id,
-          anneeScolaire: classe.anneeScolaire,
+          classeId: classe!.id,
+          anneeScolaire: classe!.anneeScolaire,
         },
       });
 
@@ -172,8 +220,8 @@ async function approuver(id: string) {
         await tx.inscription.create({
           data: {
             etudiantId: etudiant.id,
-            classeId: classe.id,
-            anneeScolaire: classe.anneeScolaire,
+            classeId: classe!.id,
+            anneeScolaire: classe!.anneeScolaire,
           },
         });
       }
@@ -189,7 +237,7 @@ async function approuver(id: string) {
       });
     });
 
-    // 6. Envoyer l'email avec les identifiants
+    // 6. Envoyer l'email
     try {
       if (config.resendApiKey && config.emailFrom) {
         const resend = new Resend(config.resendApiKey);
@@ -200,7 +248,7 @@ async function approuver(id: string) {
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Inscription validée !</h2>
-              <p>Le compte de <strong>${demande.prenom} ${demande.nom}</strong> a été créé et inscrit en <strong>${classe.nom}</strong>.</p>
+              <p>Le compte de <strong>${demande.prenom} ${demande.nom}</strong> a été créé et inscrit en <strong>${classe!.nom}</strong>.</p>
 
               <h3>👦 Élève</h3>
               <p><strong>Email :</strong> ${demande.emailEleve}<br/>
@@ -276,26 +324,17 @@ export default async function AdminDemandesInscriptionPage({
         </div>
       )}
 
-      {params.erreur === 'niveau-introuvable' && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
-          ❌ Aucune classe n&apos;existe pour ce niveau dans votre base. Créez d&apos;abord une classe dans{' '}
-          <a href="/admin/classes" className="underline font-medium">/admin/classes</a>{' '}
-          avec le niveau correspondant, puis réessayez.
-        </div>
-      )}
-
       {params.erreur === 'classes-pleines' && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
-          ❌ Toutes les classes de ce niveau sont pleines (30 élèves maximum par classe). 
-          Créez une nouvelle classe dans{' '}
-          <a href="/admin/classes" className="underline font-medium">/admin/classes</a>{' '}
-          avant de continuer.
+          ❌ Toutes les classes de ce niveau sont pleines (30 élèves maximum par classe) et les sections A-M sont épuisées.
+          Créez manuellement une nouvelle classe dans{' '}
+          <a href="/admin/classes" className="underline font-medium">/admin/classes</a>.
         </div>
       )}
 
       {params.erreur === 'creation-compte' && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
-          ❌ Erreur lors de la création des comptes. Vérifiez les logs serveur ou assurez-vous que l&apos;email de l&apos;élève n&apos;est pas déjà utilisé.
+          ❌ Erreur lors de la création des comptes. Vérifiez les logs serveur ou assurez-vous que l'email de l'élève n'est pas déjà utilisé.
         </div>
       )}
 
