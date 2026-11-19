@@ -69,15 +69,15 @@ model Configuration {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  motDePasse String
-  nom        String
-  prenom     String
-  role       Role
-  actif      Boolean  @default(true)
-  emailParent String?          // email du parent (pour les ÉLÈVES)
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  email       String   @unique
+  motDePasse  String
+  nom         String
+  prenom      String
+  role        Role
+  actif       Boolean  @default(true)
+  emailParent String?
+  createdAt   DateTime @default(now())
 
   coursProf      Cours[]       @relation("ProfCours")
   coursPrincipal Classe[]      @relation("ProfPrincipal")
@@ -90,7 +90,6 @@ model User {
   enfants        ParentEleve[] @relation("Parent")
   parents        ParentEleve[] @relation("Eleve")
 
-  // Relations supplémentaires
   demandesInscriptionEtudiant DemandeInscription[] @relation("DemandeInscriptionEtudiant")
   demandesInscriptionParent   DemandeInscription[] @relation("DemandeInscriptionParent")
   notifications               Notification[]       @relation("NotificationDestinataire")
@@ -98,13 +97,17 @@ model User {
   tarifsProfesseur            TarifProfesseur[]    @relation("TarifProf")
   seancesDeclarees            SeanceTravail[]      @relation("SeancesProf")
   seancesTraitees             SeanceTravail[]      @relation("SeancesTraitees")
+  annoncesProf                Annonce[]            @relation("AnnoncesProf")
+
+  // ⭐ INDEX : recherche par rôle + statut actif
+  @@index([role, actif])
 }
 
 model ParentEleve {
   id       String  @id @default(cuid())
   parentId String
   eleveId  String
-  relation String? // "père", "mère", "tuteur"
+  relation String?
 
   parent User @relation("Parent", fields: [parentId], references: [id], onDelete: Cascade)
   eleve  User @relation("Eleve", fields: [eleveId], references: [id], onDelete: Cascade)
@@ -123,6 +126,7 @@ model Classe {
   inscriptions        Inscription[]
   cours               Cours[]
   volumes             VolumeHoraire[]
+  annonces            Annonce[]
 
   @@unique([nom, anneeScolaire])
 }
@@ -183,6 +187,10 @@ model Cours {
   devoirs     Devoir[]
   evaluations Evaluation[]
   seances     SeanceTravail[]
+
+  // ⭐ INDEX : recherche par classe + jour + heure, et par prof + jour
+  @@index([classeId, jourSemaine, heureDebut])
+  @@index([professeurId, jourSemaine])
 }
 
 model Inscription {
@@ -195,6 +203,9 @@ model Inscription {
   classe   Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
 
   @@unique([etudiantId, classeId, anneeScolaire])
+  // ⭐ INDEX : recherche par classe + année, et par étudiant + année
+  @@index([classeId, anneeScolaire])
+  @@index([etudiantId, anneeScolaire])
 }
 
 model Presence {
@@ -208,6 +219,9 @@ model Presence {
   etudiant User  @relation(fields: [etudiantId], references: [id], onDelete: Cascade)
 
   @@unique([coursId, etudiantId, date])
+  // ⭐ INDEX : recherche par étudiant + date, et par cours + date
+  @@index([etudiantId, date])
+  @@index([coursId, date])
 }
 
 model Evaluation {
@@ -241,6 +255,9 @@ model Note {
   evaluation Evaluation? @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
 
   @@unique([etudiantId, evaluationId])
+  // ⭐ INDEX : recherche par étudiant + matière, et par matière + date
+  @@index([etudiantId, matiereId])
+  @@index([matiereId, date])
 }
 
 model Devoir {
@@ -264,42 +281,46 @@ model Message {
 
   expediteur   User @relation("Expediteur", fields: [expediteurId], references: [id])
   destinataire User @relation("Destinataire", fields: [destinataireId], references: [id])
+
+  // ⭐ INDEX : recherche des messages non lus, et par expéditeur
+  @@index([destinataireId, lu, createdAt])
+  @@index([expediteurId, createdAt])
 }
 
 model Archive {
-  id          String   @id @default(cuid())
+  id            String   @id @default(cuid())
   anneeScolaire String
-  nom         String
-  type        String
-  format      String
-  contenu     String   @db.Text
-  nbEleves    Int      @default(0)
-  nbNotes     Int      @default(0)
-  nbClasses   Int      @default(0)
-  createdAt   DateTime @default(now())
-  createdById String?
+  nom           String
+  type          String
+  format        String
+  contenu       String   @db.Text
+  nbEleves      Int      @default(0)
+  nbNotes       Int      @default(0)
+  nbClasses     Int      @default(0)
+  createdAt     DateTime @default(now())
+  createdById   String?
 }
 
 model DemandeInscription {
-  id               String        @id @default(cuid())
-  nom              String        // Nom de l'élève
-  prenom           String        // Prénom de l'élève
-  emailEleve       String        // Email de l'élève
-  emailParent      String        // Email du parent
-  nomParent        String        // Nom du parent
-  prenomParent     String        // Prénom du parent
-  telephone        String?
-  niveauDemande    String        // "7eme", "8eme", "9eme", "1ere", "2eme", "3eme", "4eme"
-  statut           StatutDemande @default(EN_ATTENTE)
-  motifRejet       String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  nom           String
+  prenom        String
+  emailEleve    String
+  emailParent   String
+  nomParent     String
+  prenomParent  String
+  telephone     String?
+  niveauDemande String
+  statut        StatutDemande @default(EN_ATTENTE)
+  motifRejet    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  etudiantId       String?
-  etudiant         User?         @relation("DemandeInscriptionEtudiant", fields: [etudiantId], references: [id])
+  etudiantId String?
+  etudiant   User? @relation("DemandeInscriptionEtudiant", fields: [etudiantId], references: [id])
 
-  parentId         String?
-  parent           User?         @relation("DemandeInscriptionParent", fields: [parentId], references: [id])
+  parentId String?
+  parent   User? @relation("DemandeInscriptionParent", fields: [parentId], references: [id])
 }
 
 model Notification {
@@ -361,7 +382,7 @@ model TarifProfesseur {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  professeur User              @relation("TarifProf", fields: [professeurId], references: [id], onDelete: Cascade)
+  professeur User             @relation("TarifProf", fields: [professeurId], references: [id], onDelete: Cascade)
   paiements  PaieProfesseur[]
 
   @@unique([professeurId, anneeScolaire])
@@ -390,19 +411,19 @@ model PaieProfesseur {
 // ============================================================
 
 model SeanceTravail {
-  id                String       @id @default(cuid())
-  professeurId      String
-  coursId           String?
-  date              DateTime
-  heuresDeclarees   Float
-  heuresValidees    Float?
-  description       String?
-  statut            StatutSeance @default(EN_ATTENTE)
-  motifRejet        String?
-  declareLe         DateTime     @default(now())
-  traiteLe          DateTime?
-  traiteParId       String?
-  horsEmploi        Boolean      @default(false)
+  id              String       @id @default(cuid())
+  professeurId    String
+  coursId         String?
+  date            DateTime
+  heuresDeclarees Float
+  heuresValidees  Float?
+  description     String?
+  statut          StatutSeance @default(EN_ATTENTE)
+  motifRejet      String?
+  declareLe       DateTime     @default(now())
+  traiteLe        DateTime?
+  traiteParId     String?
+  horsEmploi      Boolean      @default(false)
 
   professeur User   @relation("SeancesProf", fields: [professeurId], references: [id], onDelete: Cascade)
   cours      Cours? @relation(fields: [coursId], references: [id], onDelete: SetNull)
@@ -410,4 +431,20 @@ model SeanceTravail {
 
   @@index([professeurId, date])
   @@index([statut])
+}
+
+model Annonce {
+  id           String    @id @default(cuid())
+  titre        String
+  contenu      String
+  type         String    @default("INFO")
+  classeId     String
+  professeurId String
+  createdAt    DateTime  @default(now())
+  expireLe     DateTime?
+
+  classe     Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  professeur User   @relation("AnnoncesProf", fields: [professeurId], references: [id], onDelete: Cascade)
+
+  @@index([classeId, createdAt])
 }
