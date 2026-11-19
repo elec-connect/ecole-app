@@ -1,12 +1,27 @@
 import { NextResponse } from 'next/server';
 import { getPrismaDynamic } from '@/lib/prisma-dynamic';
+import { getConfig } from '@/lib/config';
 import { withSuperAdmin, withAdminOrSuper } from '@/lib/api-helpers';
 import bcrypt from 'bcryptjs';
 
-// ⭐ Email du Super Admin propriétaire
 const EMAIL_PROPRIETAIRE = 'haouala18@gmail.com';
 
-// GET : Admin et Super Admin peuvent voir
+const NIVEAUX_LABELS: Record<string, string> = {
+  '1ere_primaire': '1ère primaire',
+  '2eme_primaire': '2ème primaire',
+  '3eme_primaire': '3ème primaire',
+  '4eme_primaire': '4ème primaire',
+  '5eme_primaire': '5ème primaire',
+  '6eme_primaire': '6ème primaire',
+  '7eme': '7ème',
+  '8eme': '8ème',
+  '9eme': '9ème',
+  '1ere': '1ère',
+  '2eme': '2ème',
+  '3eme': '3ème',
+  '4eme': '4ème',
+};
+
 export const GET = withAdminOrSuper(async (_req, session, ctx) => {
   const { id } = await ctx.params;
   const db = await getPrismaDynamic();
@@ -37,7 +52,6 @@ export const GET = withAdminOrSuper(async (_req, session, ctx) => {
 
   if (!user) return NextResponse.json({ erreur: 'Introuvable' }, { status: 404 });
 
-  // ⭐ Un admin (non propriétaire) ne peut pas voir le compte propriétaire
   if (user.email === EMAIL_PROPRIETAIRE && session.email !== EMAIL_PROPRIETAIRE) {
     return NextResponse.json({ erreur: 'Introuvable' }, { status: 404 });
   }
@@ -45,27 +59,20 @@ export const GET = withAdminOrSuper(async (_req, session, ctx) => {
   return NextResponse.json(user);
 });
 
-// PUT : Super Admin (tout) | Admin (élèves et parents uniquement)
 export const PUT = withAdminOrSuper(async (req, session, ctx) => {
   const { id } = await ctx.params;
   const body = await req.json();
   const db = await getPrismaDynamic();
 
-  // ⭐ Récupérer la cible
   const cible = await db.user.findUnique({ where: { id } });
   if (!cible) {
     return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 });
   }
 
-  // ⭐ Protection : seul le propriétaire peut modifier son propre compte
   if (cible.email === EMAIL_PROPRIETAIRE && session.email !== EMAIL_PROPRIETAIRE) {
-    return NextResponse.json(
-      { erreur: 'Action non autorisée sur ce compte.' },
-      { status: 403 }
-    );
+    return NextResponse.json({ erreur: 'Action non autorisée sur ce compte.' }, { status: 403 });
   }
 
-  // ⭐ Sécurité : si c'est un ADMIN, il ne peut éditer QUE les élèves et les parents
   if (session.role === 'ADMIN') {
     if (cible.role !== 'ETUDIANT' && cible.role !== 'PARENT') {
       return NextResponse.json(
@@ -73,7 +80,6 @@ export const PUT = withAdminOrSuper(async (req, session, ctx) => {
         { status: 403 }
       );
     }
-    // Un Admin ne peut pas changer le rôle d'un utilisateur (sécurité)
     if (body.role && body.role !== cible.role) {
       return NextResponse.json(
         { erreur: 'Un administrateur ne peut pas modifier le rôle.' },
@@ -101,27 +107,50 @@ export const PUT = withAdminOrSuper(async (req, session, ctx) => {
     data.matieres = { set: [] };
   }
 
-  // Mise à jour de l'inscription (classe)
-  if (body.classeId !== undefined && (body.role === 'ETUDIANT' || session.role === 'ADMIN')) {
+  // ⭐ Gestion de la classe (création auto si nécessaire)
+  if (body.classeId !== undefined && (body.role === 'ETUDIANT' || cible.role === 'ETUDIANT')) {
+    let classeIdFinal = body.classeId;
+
+    if (body.classeId && body.classeId.startsWith('new-')) {
+      const parts = body.classeId.split('-');
+      const section = parts[parts.length - 1];
+      const niveau = parts.slice(1, -1).join('-');
+      const niveauLabel = NIVEAUX_LABELS[niveau] || niveau;
+      const nomClasse = `${niveauLabel} ${section}`;
+
+      const config = await getConfig();
+      const anneeScolaire = config.anneeScolaireCourante;
+
+      const nouvelleClasse = await db.classe.create({
+        data: {
+          nom: nomClasse,
+          niveau,
+          anneeScolaire: anneeScolaire!,
+        },
+      });
+      classeIdFinal = nouvelleClasse.id;
+      console.log(`[UTILISATEUR PUT] Classe créée automatiquement : ${nomClasse}`);
+    }
+
     const user = await db.user.findUnique({ where: { id }, include: { inscriptions: true } });
     const inscriptionActuelle = user?.inscriptions[0];
 
-    if (body.classeId === '' || body.classeId === null) {
+    if (classeIdFinal === '' || classeIdFinal === null) {
       if (inscriptionActuelle) {
         await db.inscription.delete({ where: { id: inscriptionActuelle.id } });
       }
     } else if (inscriptionActuelle) {
-      if (inscriptionActuelle.classeId !== body.classeId) {
+      if (inscriptionActuelle.classeId !== classeIdFinal) {
         await db.inscription.update({
           where: { id: inscriptionActuelle.id },
-          data: { classeId: body.classeId },
+          data: { classeId: classeIdFinal },
         });
       }
     } else {
-      const classe = await db.classe.findUnique({ where: { id: body.classeId } });
+      const classe = await db.classe.findUnique({ where: { id: classeIdFinal } });
       if (classe) {
         await db.inscription.create({
-          data: { etudiantId: id, classeId: body.classeId, anneeScolaire: classe.anneeScolaire },
+          data: { etudiantId: id, classeId: classeIdFinal, anneeScolaire: classe.anneeScolaire },
         });
       }
     }
@@ -146,7 +175,6 @@ export const PUT = withAdminOrSuper(async (req, session, ctx) => {
   return NextResponse.json(user);
 });
 
-// DELETE : UNIQUEMENT Super Admin
 export const DELETE = withSuperAdmin(async (_req, session, ctx) => {
   const { id } = await ctx.params;
   
@@ -159,17 +187,13 @@ export const DELETE = withSuperAdmin(async (_req, session, ctx) => {
 
   const db = await getPrismaDynamic();
 
-  // ⭐ Protection : le compte propriétaire ne peut pas être supprimé par un autre
   const cible = await db.user.findUnique({ where: { id } });
   if (!cible) {
     return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 });
   }
 
   if (cible.email === EMAIL_PROPRIETAIRE && session.email !== EMAIL_PROPRIETAIRE) {
-    return NextResponse.json(
-      { erreur: 'Impossible de supprimer ce compte.' },
-      { status: 403 }
-    );
+    return NextResponse.json({ erreur: 'Impossible de supprimer ce compte.' }, { status: 403 });
   }
 
   try {
