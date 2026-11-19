@@ -2,6 +2,7 @@ import { getSession } from '@/lib/auth';
 import { getPrismaDynamic } from '@/lib/prisma-dynamic';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { AnnoncesRecentesParent } from '@/components/AnnoncesRecentesParent';
 
 export const dynamic = 'force-dynamic'; // ⭐ Ajouté
 
@@ -113,6 +114,8 @@ export default async function ParentDashboard() {
           })}
         </div>
       )}
+      {/* ⭐ Aperçu des annonces récentes */}
+<AnnoncesRecentesParent />
     </div>
   );
 }

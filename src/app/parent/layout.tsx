@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header';
 
 const ITEMS = [
   { href: '/parent/dashboard', label: 'Mes enfants', icon: '👨‍👩‍👧' },
+  { href: '/parent/annonces', label: 'Annonces', icon: '📢' }, // ⭐ NOUVEAU
 ];
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
