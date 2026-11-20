@@ -11,6 +11,7 @@ const ITEMS = [
   { href: '/prof/notes', label: 'Saisir des notes', icon: '📝' },
   { href: '/prof/devoirs', label: 'Devoirs', icon: '📚' },
   { href: '/prof/seances', label: 'Mes séances', icon: '🕒' },
+  { href: '/prof/annonces', label: 'Mes annonces', icon: '📢' },
 ];
 
 export default async function Layout({ children }: { children: React.ReactNode }) {

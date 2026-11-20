@@ -147,6 +147,13 @@ export default function UtilisateursPage() {
     }
   }, [form.role, form.email, eleves]);
 
+  // ⭐ Si un ADMIN est connecté, on retire les filtres SUPER_ADMIN et ADMIN
+  useEffect(() => {
+    if (roleConnecte === 'ADMIN' && (filtreRole === 'SUPER_ADMIN' || filtreRole === 'ADMIN')) {
+      setFiltreRole('TOUS');
+    }
+  }, [roleConnecte, filtreRole]);
+
   // ⭐ Toutes les classes possibles (niveau × section), qu'elles existent ou non
   const toutesLesClassesPossibles = useMemo(() => {
     return TOUS_LES_NIVEAUX.flatMap((niveau) =>
@@ -561,8 +568,8 @@ export default function UtilisateursPage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Filtrer par rôle</label>
           <select value={filtreRole} onChange={(e) => setFiltreRole(e.target.value as Role | 'TOUS')} className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
             <option value="TOUS">Tous les rôles</option>
-            <option value="SUPER_ADMIN">Super Admin</option>
-            <option value="ADMIN">Admins</option>
+            {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
+            {isSuperAdmin && <option value="ADMIN">Admins</option>}
             <option value="PROFESSEUR">Professeurs</option>
             <option value="ETUDIANT">Élèves</option>
             <option value="PARENT">Parents</option>

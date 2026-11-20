@@ -42,6 +42,9 @@ export const PATCH = withAdminOrSuper(async (req, _session, ctx) => {
   // ============================
   const config = await getConfig();
   const anneeScolaire = config.anneeScolaireCourante;
+  
+  // ⭐ Récupérer l'URL de base de l'application (dynamique)
+  const appUrl = (config as any).appUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
   // Chercher une classe dont le niveau correspond, dans l'année courante en priorité
   let classe = await db.classe.findFirst({
@@ -128,7 +131,7 @@ export const PATCH = withAdminOrSuper(async (req, _session, ctx) => {
               a été créé et inscrit en classe de <strong>${result.classe!.nom}</strong>.</p>
               <p><strong>Email de connexion :</strong> ${result.emailEtudiant}</p>
               <p><strong>Mot de passe temporaire :</strong> ${result.motDePasseTemporaire}</p>
-              <p>Connectez-vous sur <a href="https://www.smart-haouala.tn/login">https://www.smart-haouala.tn/login</a></p>
+              <p>Connectez-vous sur <a href="${appUrl}/login">${appUrl}/login</a></p>
             </div>
           `,
         });

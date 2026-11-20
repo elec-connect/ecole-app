@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guide de déploiement — Client AMED (amed-app.tn)</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --danger: #dc2626;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-600: #4b5563;
+      --gray-900: #111827;
+      --purple: #7c3aed;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    header p { font-size: 1.1rem; opacity: 0.9; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+    .step {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border-left: 4px solid var(--primary);
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .step-number {
+      background: var(--primary);
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .step h2 { font-size: 1.4rem; }
+    .step-content { margin-left: 3rem; }
+    .step-content p { margin-bottom: 0.8rem; color: var(--gray-600); }
+    .step-content code {
+      background: var(--gray-100);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.9em;
+      color: var(--danger);
+    }
+    .step-content pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 0.8rem 0;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+      position: relative;
+    }
+    .step-content pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+    }
+    .step-content ul, .step-content ol {
+      margin-left: 1.5rem;
+      color: var(--gray-600);
+      margin-bottom: 0.8rem;
+    }
+    .step-content li { margin-bottom: 0.4rem; }
+
+    .alert {
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    .alert-info { background: #dbeafe; border-left: 4px solid var(--primary); color: #1e3a8a; }
+    .alert-success { background: #dcfce7; border-left: 4px solid var(--success); color: #14532d; }
+    .alert-warning { background: #fef3c7; border-left: 4px solid var(--warning); color: #92400e; }
+    .alert-danger { background: #fee2e2; border-left: 4px solid var(--danger); color: #7f1d1d; }
+
+    .info-box {
+      background: #f8fafc;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      margin: 1rem 0;
+    }
+    .info-box h4 { font-size: 1rem; color: var(--primary); margin-bottom: 0.5rem; }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .table th, .table td {
+      padding: 0.8rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 0.9rem;
+    }
+    .table th { background: var(--gray-50); font-weight: 600; }
+    .table tr:last-child td { border-bottom: none; }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--gray-600);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--gray-200);
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.8rem; }
+      .step-content { margin-left: 0; margin-top: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🎓 Déploiement — Client AMED</h1>
+    <p>Site web : <strong>amed-app.tn</strong></p>
+    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">Procédure complète de A à Z</p>
+  </header>
+
+  <div class="container">
+
+    <!-- ÉTAPE 1 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Préparer la copie locale (sur votre PC)</h2>
+      </div>
+      <div class="step-content">
+        <p><strong>1.1 — Copier le dossier de référence</strong></p>
+        <pre><code>cd "C:\Users\Sahnoun HAWALA\Desktop"
+robocopy "ecole-app" "amed-app" /E /XD node_modules .next .git</code></pre>
+        
+        <p><strong>1.2 — Nettoyer les anciens fichiers</strong></p>
+        <pre><code>cd "amed-app"
+Remove-Item ".env" -Force -ErrorAction SilentlyContinue
+Remove-Item ".env.local" -Force -ErrorAction SilentlyContinue
+Remove-Item ".vercel" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue</code></pre>
+        
+        <p><strong>1.3 — Installer les dépendances</strong></p>
+        <pre><code>npm install</code></pre>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 2 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Créer la base de données (Neon)</h2>
+      </div>
+      <div class="step-content">
+        <ol>
+          <li>Allez sur <a href="https://console.neon.tech" target="_blank">console.neon.tech</a> → <strong>New Project</strong>.</li>
+          <li>Nommez-le <code>amed-app</code>.</li>
+          <li>Région : <strong>Frankfurt</strong>.</li>
+          <li>Cliquez sur <strong>Create</strong>.</li>
+          <li>Cliquez sur <strong>Connect</strong> → copiez la chaîne de connexion <strong>Pooled</strong>.</li>
+        </ol>
+        <div class="alert alert-info">
+          💡 Format de l'URL : <code>postgresql://neondb_owner:MOT_DE_PASSE@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 3 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Générer la clé de chiffrement (unique pour AMED)</h2>
+      </div>
+      <div class="step-content">
+        <pre><code>node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"</code></pre>
+        <p>Copiez le résultat (ex: <code>xY3kL9...==</code>). <strong>Ne la perdez pas.</strong></p>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 4 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Créer le fichier <code>.env</code> local</h2>
+      </div>
+      <div class="step-content">
+        <p>Créez le fichier <code>.env</code> dans <code>amed-app/</code> avec ces valeurs :</p>
+        <pre><code>CONFIG_ENCRYPTION_KEY="COLLER_LA_CLE_GENEREE"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+DATABASE_URL="COLLER_URL_NEON_POOLED"
+BOOTSTRAP_DATABASE_URL="COLLER_URL_NEON_POOLED"
+BOOTSTRAP_ADMIN_EMAIL="admin@amed-app.tn"
+BOOTSTRAP_ADMIN_PASSWORD="Admin123!"</code></pre>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 5 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Initialiser la base et tester en local</h2>
+      </div>
+      <div class="step-content">
+        <p><strong>5.1 — Appliquer les migrations</strong></p>
+        <pre><code>npx prisma migrate deploy</code></pre>
+        
+        <p><strong>5.2 — Bootstrap (crée la config et le compte admin)</strong></p>
+        <pre><code>npm run bootstrap</code></pre>
+        
+        <p><strong>5.3 — Lancer en local</strong></p>
+        <pre><code>npm run dev</code></pre>
+        <p>Connectez-vous sur <code>http://localhost:3000</code> avec <code>admin@amed-app.tn</code> / <code>Admin123!</code>.</p>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 6 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">6</div>
+        <h2>Déployer sur Vercel (nouveau projet)</h2>
+      </div>
+      <div class="step-content">
+        <ol>
+          <li>Allez sur <a href="https://vercel.com" target="_blank">vercel.com</a> → <strong>Add New Project</strong>.</li>
+          <li>Importez le dépôt <strong><code>elec-connect/ecole-app</code></strong> (le même GitHub pour tous les clients).</li>
+          <li><strong>Nom du projet</strong> : <code>amed-app</code>.</li>
+          <li>Ajoutez les <strong>variables d'environnement</strong> :</li>
+        </ol>
+        
+        <table class="table">
+          <thead><tr><th>Nom</th><th>Valeur</th></tr></thead>
+          <tbody>
+            <tr><td><code>DATABASE_URL</code></td><td>L'URL Neon Pooled</td></tr>
+            <tr><td><code>CONFIG_ENCRYPTION_KEY</code></td><td>La clé générée à l'étape 3</td></tr>
+            <tr><td><code>NEXT_PUBLIC_APP_URL</code></td><td><code>https://www.amed-app.tn</code></td></tr>
+            <tr><td><code>CRON_SECRET</code></td><td><code>amed-cron-2026</code> (valeur temporaire)</td></tr>
+          </tbody>
+        </table>
+        
+        <ol start="5">
+          <li>Cliquez sur <strong>Deploy</strong>.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 7 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">7</div>
+        <h2>Configurer le domaine <code>amed-app.tn</code> (OVH + Vercel)</h2>
+      </div>
+      <div class="step-content">
+        <p><strong>7.1 — Sur Vercel</strong> : Projet <code>amed-app</code> → <strong>Settings → Domains</strong> → ajoutez <code>amed-app.tn</code> et <code>www.amed-app.tn</code>.</p>
+        
+        <p><strong>7.2 — Sur OVH</strong> : Allez dans <strong>Web Cloud → Domaines → amed-app.tn → Zone DNS</strong>.</p>
+        
+        <p><strong>7.3 — Ajoutez les enregistrements</strong> fournis par Vercel :</p>
+        <table class="table">
+          <thead><tr><th>Type</th><th>Nom</th><th>Valeur</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A</strong></td><td><code>@</code></td><td>L'IP fournie par Vercel (ex: <code>76.76.21.21</code>)</td></tr>
+            <tr><td><strong>CNAME</strong></td><td><code>www</code></td><td><code>cname.vercel-dns.com</code></td></tr>
+          </tbody>
+        </table>
+        
+        <p><strong>7.4 — Attendez la propagation</strong> (quelques minutes à 24h). Vercel générera automatiquement le certificat SSL.</p>
+        
+        <div class="alert alert-warning">
+          ⚠️ Ne touchez pas aux enregistrements <strong>MX</strong> existants si vous avez des emails OVH sur ce domaine.
+        </div>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 8 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">8</div>
+        <h2>Configurer Resend pour les emails</h2>
+      </div>
+      <div class="step-content">
+        <p><strong>8.1 — Sur Resend</strong> : Ajoutez le domaine <code>amed-app.tn</code>.</p>
+        
+        <p><strong>8.2 — Sur OVH</strong> : Ajoutez les <strong>4 enregistrements DNS</strong> fournis par Resend :</p>
+        <ul>
+          <li>1 DKIM (TXT)</li>
+          <li>2 SPF (CNAME)</li>
+          <li>1 DMARC (TXT)</li>
+        </ul>
+        
+        <div class="alert alert-danger">
+          ⚠️ <strong>Ne touchez pas aux MX existants.</strong> Resend ne demande que des TXT et CNAME.
+        </div>
+        
+        <p><strong>8.3 — Vérifiez</strong> le domaine dans Resend (statut « Verified »).</p>
+        
+        <p><strong>8.4 — Créez une clé API</strong> Resend (<code>re_...</code>).</p>
+        
+        <p><strong>8.5 — Dans l'application AMED</strong> : Connectez-vous en <strong>SUPER_ADMIN</strong> → <code>/admin/configuration</code> → déverrouillez → section <strong>Resend</strong> :</p>
+        <ul>
+          <li>Collez la clé API <code>re_...</code></li>
+          <li>Email expéditeur : <code>AMED &lt;contact@amed-app.tn&gt;</code></li>
+          <li>Enregistrez.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 9 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">9</div>
+        <h2>Configuration finale dans l'application</h2>
+      </div>
+      <div class="step-content">
+        <ol>
+          <li>Allez sur <code>/admin/configuration</code> :
+            <ul>
+              <li><strong>Nom établissement</strong> : <code>AMED</code></li>
+              <li><strong>Année scolaire</strong> : <code>2025-2026</code></li>
+              <li><strong>Logo</strong> : uploadez le logo d'AMED.</li>
+            </ul>
+          </li>
+          <li>Allez sur <code>/admin/classes</code> → <strong>⚡ Générer les 5 classes par niveau</strong> (crée les 65 classes).</li>
+          <li>Allez sur <code>/admin/matieres</code> → créez les matières.</li>
+          <li>Allez sur <code>/admin/utilisateurs</code> → créez les professeurs, puis les élèves.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 10 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">10</div>
+        <h2>Livrer l'application au client</h2>
+      </div>
+      <div class="step-content">
+        <p><strong>10.1 — Désactivez la protection Vercel</strong> (si activée) : Settings → Deployment Protection → Standard Protection.</p>
+        
+        <p><strong>10.2 — Donnez au client</strong> :</p>
+        <ul>
+          <li>L'URL : <code>https://www.amed-app.tn</code></li>
+          <li>Identifiant admin : <code>admin@amed-app.tn</code></li>
+          <li>Mot de passe : <code>Admin123!</code> (à changer après la 1ère connexion)</li>
+        </ul>
+        
+        <p><strong>10.3 — Pour l'icône sur le bureau</strong> : Le client ouvre le site dans Chrome → clique sur <strong>⊕ Installer</strong> (PWA) → l'icône AMED apparaît sur le bureau.</p>
+      </div>
+    </div>
+
+    <!-- RÉCAPITULATIF -->
+    <div class="step" style="border-left-color: var(--success);">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--success);">✅</div>
+        <h2>Récapitulatif des identifiants</h2>
+      </div>
+      <div class="step-content">
+        <table class="table">
+          <thead><tr><th>Élément</th><th>Valeur</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Domaine</strong></td><td><code>amed-app.tn</code></td></tr>
+            <tr><td><strong>Projet Vercel</strong></td><td><code>amed-app</code></td></tr>
+            <tr><td><strong>Base Neon</strong></td><td><code>amed-app</code></td></tr>
+            <tr><td><strong>Admin bootstrap</strong></td><td><code>admin@amed-app.tn</code> / <code>Admin123!</code></td></tr>
+            <tr><td><strong>Clé de config</strong></td><td>(celle générée à l'étape 3)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Guide de déploiement AMED — Fait avec ❤️
+  </footer>
+
+</body>
+</html>

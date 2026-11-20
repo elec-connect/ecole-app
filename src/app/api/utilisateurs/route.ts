@@ -27,17 +27,30 @@ export const GET = withAdminOrSuper(async (req, session) => {
   const { searchParams } = new URL(req.url);
   const role = searchParams.get('role') as Role | null;
 
+  // ⭐ Un ADMIN ne peut jamais lister explicitement les SUPER_ADMIN ni les ADMIN
+  if (session.role === 'ADMIN' && (role === 'SUPER_ADMIN' || role === 'ADMIN')) {
+    return NextResponse.json([]);
+  }
+
   const db = await getPrismaDynamic();
 
-  const filtreEmail = session.email === EMAIL_PROPRIETAIRE 
-    ? {} 
-    : { email: { not: EMAIL_PROPRIETAIRE } };
+  const where: any = {};
+
+  // Filtre email propriétaire (inchangé)
+  if (session.email !== EMAIL_PROPRIETAIRE) {
+    where.email = { not: EMAIL_PROPRIETAIRE };
+  }
+
+  // Filtre rôle demandé
+  if (role) {
+    where.role = role;
+  } else if (session.role === 'ADMIN') {
+    // ⭐ Un ADMIN ne voit ni les SUPER_ADMIN ni les autres ADMIN
+    where.role = { notIn: ['SUPER_ADMIN', 'ADMIN'] };
+  }
 
   const users = await db.user.findMany({
-    where: {
-      ...(role ? { role } : {}),
-      ...filtreEmail,
-    },
+    where,
     select: {
       id: true,
       email: true,

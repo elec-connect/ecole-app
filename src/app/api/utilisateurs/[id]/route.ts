@@ -56,6 +56,14 @@ export const GET = withAdminOrSuper(async (_req, session, ctx) => {
     return NextResponse.json({ erreur: 'Introuvable' }, { status: 404 });
   }
 
+  // ⭐ Un ADMIN ne peut jamais accéder au détail d'un SUPER_ADMIN ou d'un autre ADMIN
+  if (
+    session.role === 'ADMIN' &&
+    (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN')
+  ) {
+    return NextResponse.json({ erreur: 'Introuvable' }, { status: 404 });
+  }
+
   return NextResponse.json(user);
 });
 
@@ -71,6 +79,17 @@ export const PUT = withAdminOrSuper(async (req, session, ctx) => {
 
   if (cible.email === EMAIL_PROPRIETAIRE && session.email !== EMAIL_PROPRIETAIRE) {
     return NextResponse.json({ erreur: 'Action non autorisée sur ce compte.' }, { status: 403 });
+  }
+
+  // ⭐ Un ADMIN ne peut jamais éditer un SUPER_ADMIN ni un autre ADMIN
+  if (
+    session.role === 'ADMIN' &&
+    (cible.role === 'SUPER_ADMIN' || cible.role === 'ADMIN')
+  ) {
+    return NextResponse.json(
+      { erreur: 'Action non autorisée sur ce compte.' },
+      { status: 403 }
+    );
   }
 
   if (session.role === 'ADMIN') {
