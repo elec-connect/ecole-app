@@ -261,9 +261,15 @@ export default function LoginPage() {
         <InstallerEncart />
 
         {/* Footer */}
-        <p className="text-center text-xs text-gray-400 mt-6">
-          © {new Date().getFullYear()} ÉcoleApp — Tous droits réservés
-        </p>
+        {/* Footer */}
+<div className="text-center mt-6 space-y-1">
+  <p className="text-xs text-gray-400">
+    © {new Date().getFullYear()} ÉcoleApp — Tous droits réservés
+  </p>
+  <p className="text-xs text-gray-400">
+    Dev.: <span className="font-semibold text-gray-500">SAHNOUN BEN HAOUALA</span>
+  </p>
+</div>
       </div>
     </div>
   );
